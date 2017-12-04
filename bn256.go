@@ -49,6 +49,11 @@ func RandomG1(r io.Reader) (*big.Int, *G1, error) {
 	return k, new(G1).ScalarBaseMult(k), nil
 }
 
+func (g *G1) IsOnCurve() bool {
+	g.p.MakeAffine(nil)
+	return g.p.IsOnCurve()
+}
+
 func (g *G1) String() string {
 	return "bn256.G1" + g.p.String()
 }
