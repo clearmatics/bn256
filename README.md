@@ -1,6 +1,6 @@
 # BN256
 
-[![Build Status](https://travis-ci.org/clearmatics/bn256.svg?branch=ci)](https://travis-ci.org/clearmatics/bn256)
+[![Build Status](https://travis-ci.org/clearmatics/bn256.svg?branch=master)](https://travis-ci.org/clearmatics/bn256)
 
 bn256 implements a particular bilinear group at the 128-bit security level. 
 
