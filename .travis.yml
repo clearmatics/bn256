@@ -1,0 +1,16 @@
+language: go
+
+matrix:
+    - os: linux
+      dist: trusty
+      go: 1.8.x
+      script:
+        - make check
+        - make coverage        
+       
+    - os: linux
+      dist: trusty
+      go: 1.9.x
+      script:
+        - make check
+        - make coverage        
