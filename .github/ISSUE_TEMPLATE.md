@@ -4,7 +4,7 @@
 * [ ] Are you reporting to the correct repository?
 * [ ] Did you perform a cursory search?
 
-For more information, see the `[CONTRIBUTING](CONTRIBUTING.md)` guide.
+For more information, see the [`CONTRIBUTING`](CONTRIBUTING.md) guide.
 
 ### Description
 
