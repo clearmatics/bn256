@@ -1,34 +1,34 @@
-.DEFAULT_GOAL := build
-GOFILES_NOVENDOR = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
-SHELL=/bin/bash
+SHELL = bash
+GO_FILES = $(shell find . -name "*.go" | grep -vE ".git")
+GO_COVER_FILE = `find . -name "coverage.out"`
 
-clean:
-	@rm -f orbital
+.PHONY: all test format cover-clean check fmt vet lint
 
-test:
-	@go test -v
+test: $(GO_FILES)
+	go test ./...
 
 format:
-	@gofmt -s -w ${GOFILES_NOVENDOR}
+	gofmt -s -w ${GO_FILES}
 
-coverage:
-	go test -coverprofile=coverage.out 
-	@go tool cover -html=coverage.out
+cover: $(GO_FILES)
+	go test -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out
 
-build:
-	@go build .
+cover-clean:
+	rm -f $(GO_COVER_FILE)
+
+deps:
+	go mod download
 
 check:
-	@if [ -n "$(shell gofmt -l ${GOFILES_NOVENDOR})" ]; then \
+	if [ -n "$(shell gofmt -l ${GO_FILES})" ]; then \
 		echo 1>&2 'The following files need to be formatted:'; \
 		gofmt -l .; \
 		exit 1; \
-		fi
+	fi
 
 vet:
-	@go vet ${GOFILES_NOVENDOR}
+	go vet $(GO_FILES)
 
 lint:
-	@golint ${GOFILES_NOVENDOR}
-
-
+	golint $(GO_FILES)
