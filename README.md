@@ -17,9 +17,17 @@ The parameters defined in the `constants.go` file follow the parameters used in 
 
 ## Development
 
-Dependencies are managed via [dep][1]. Dependencies are checked into this repository in the `vendor` folder. Documentation for managing dependencies is available in the [dep README][2].
+This project uses [go modules](https://github.com/golang/go/wiki/Modules).
+If you develop in your `GOPATH` and use GO 1.11, make sure to run:
+```bash
+export GO111MODULE=on
+```
+
+In fact:
+>  (Inside $GOPATH/src, for compatibility, the go command still runs in the old GOPATH mode, even if a go.mod is found.)
+See: https://blog.golang.org/using-go-modules
+
+> For more fine-grained control, the module support in Go 1.11 respects a temporary environment variable, GO111MODULE, which can be set to one of three string values: off, on, or auto (the default). If GO111MODULE=off, then the go command never uses the new module support. Instead it looks in vendor directories and GOPATH to find dependencies; we now refer to this as "GOPATH mode." If GO111MODULE=on, then the go command requires the use of modules, never consulting GOPATH. We refer to this as the command being module-aware or running in "module-aware mode". If GO111MODULE=auto or is unset, then the go command enables or disables module support based on the current directory. Module support is enabled only when the current directory is outside GOPATH/src and itself contains a go.mod file or is below a directory containing a go.mod file.
+See: https://golang.org/cmd/go/#hdr-Preliminary_module_support
 
 The project follows standard Go conventions using `gofmt`. If you wish to contribute to the project please follow standard Go conventions. The CI server automatically runs these checks.
-
-[1]: https://github.com/golang/dep
-[2]: https://github.com/golang/dep/blob/master/README.md
