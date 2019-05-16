@@ -5,12 +5,14 @@ matrix:
     - os: linux
       dist: trusty
       go: 1.11.x
+      env: GO111MODULE=on
       script:
         - make check
         - make deps
         - make test
     - os: linux
       dist: trusty
+      env: GO111MODULE=on
       go: 1.12.x
       script:
         - make check
