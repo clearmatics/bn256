@@ -1,9 +1,5 @@
 language: go
 
-env:
-  global:
-    - GO111MODULE=ON
-
 matrix:
   include:
     - os: linux
