@@ -19,7 +19,7 @@ build:
 	@go build .
 
 deps:
-	@go get -u
+	@go get ./...
 
 check:
 	@if [ -n "$(shell gofmt -l ${GOFILES_NOVENDOR})" ]; then \
