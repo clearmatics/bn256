@@ -1,7 +1,11 @@
 language: go
 
+env:
+  global:
+    - GO111MODULE=ON
+
 matrix:
- include:
+  include:
     - os: linux
       dist: trusty
       go: 1.11.x
@@ -9,7 +13,6 @@ matrix:
         - make check
         - make deps
         - make test
-
     - os: linux
       dist: trusty
       go: 1.12.x
