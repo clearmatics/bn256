@@ -12,11 +12,14 @@ format:
 	@gofmt -s -w ${GOFILES_NOVENDOR}
 
 coverage:
-	go test -coverprofile=coverage.out 
+	go test -coverprofile=coverage.out
 	@go tool cover -html=coverage.out
 
 build:
 	@go build .
+
+deps:
+	@go get -u
 
 check:
 	@if [ -n "$(shell gofmt -l ${GOFILES_NOVENDOR})" ]; then \
