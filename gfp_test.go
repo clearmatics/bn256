@@ -58,3 +58,24 @@ func TestGFpMul(t *testing.T) {
 		t.Errorf("multiplication mismatch: have %#x, want %#x", *h, *w)
 	}
 }
+
+// Tests the conversion from big.Int to GFp element
+func TestNewGFpFromBigInt(t *testing.T) {
+	h := newGFpFromBigInt(P)
+	w := gfP(p2)
+
+	if *h != w {
+		t.Errorf("conversion mismatch: have %#x, want %#x", *h, w)
+	}
+}
+
+// Tests the conversion from GFp element to big.Int
+func TestGFpToBigInt(t *testing.T) {
+	a := gfP(p2)
+	w := P
+	h := a.gFpToBigInt()
+
+	if r := h.Cmp(w); r != 0 {
+		t.Errorf("conversion mismatch: have %#x, want %#x", h.String(), w.String())
+	}
+}

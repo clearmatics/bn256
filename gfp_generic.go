@@ -196,8 +196,11 @@ func getYFromX(x *gfP) *gfP {
 	rhs := big.Exp(xBig, curveExpBig, P) // x^3 mod p
 	rhs.Add(rhs, curveBBig)              // x^3 + 3
 
+	// x = b^{(p+1)/4} is a solution to x^2 % p = b
+	// Since Fp is such that p = 3 mod 4
 	finalExpNum := new(big.Int).Add(P, bigFromBase10("1"))
 	finalExp := new(big.Int).Div(finalExpNum, bigFromBase10("4"))
 	yCoord := new(big.Int).Exp(rhs, finalExp, P)
+
 	return newGFpFromBigInt(yCoord)
 }

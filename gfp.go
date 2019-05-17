@@ -48,7 +48,13 @@ func newGFpFromBigInt(in *big.Int) (out *gfP) {
 // Convert a gfP into a big.Int
 func (e *gfP) gFpToBigInt() (out *big.Int) {
 	str := e.String()
+
 	out = new(big.Int)
+	_, ok := out.SetString(str, 16)
+	if !ok {
+		errors.New("couldn't create big.Int from gfP element")
+	}
+
 	return out
 }
 
