@@ -3,9 +3,15 @@ package bn256
 import (
 	"errors"
 	"fmt"
+
+	"math/big"
+	"encoding/hex"
 )
 
-type gfP [4]uint64
+// FpUint64Size is the number of uint64 chunks to represent a field element
+const FpUint64Size = 4
+
+type gfP [FpUint64Size]uint64
 
 func newGFp(x int64) (out *gfP) {
 	if x >= 0 {
@@ -21,6 +27,39 @@ func newGFp(x int64) (out *gfP) {
 
 func (e *gfP) String() string {
 	return fmt.Sprintf("%16.16x%16.16x%16.16x%16.16x", e[3], e[2], e[1], e[0])
+}
+
+// TODO: Remove this function. It is useless, we cast just type cast
+/*
+func newGFpFromUint64Array(x [FpUint64Size]uint64) (out *gfP) {
+	out = &gfP{}
+	for i:= 0; i < len(x); i++ {
+		out[i] = x[i]
+	}
+	return out
+}
+*/
+
+// Convert a big.Int into gfP
+func newGFpFromBigInt(in *big.Int) (*gfP) {
+	inBytes := in.Bytes()
+
+	res := &gfP{}
+	var n uint64
+	for int i:= 0; i < FpUint64Size; i++ {
+		buf := bytes.NewBuffer(inBytes[i*8:(i+1)*8]
+		binary.Read(buf, binary.BigEndian, &n)
+		res[(FpUint64Size - 1) - i] = n
+	}
+
+	return res
+}
+
+// Convert a gfP into a big.Int
+func (e *gfP) gFpToBigInt() (out *big.Int) {
+	str := e.String()
+	out = new(big.Int)
+	return out
 }
 
 func (e *gfP) Set(f *gfP) {

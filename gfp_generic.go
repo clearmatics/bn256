@@ -2,6 +2,8 @@
 
 package bn256
 
+import "math/big"
+
 func gfpCarry(a *gfP, head uint64) {
 	b := &gfP{}
 
@@ -170,4 +172,32 @@ func gfpMul(c, a, b *gfP) {
 
 	*c = gfP{T[4], T[5], T[6], T[7]}
 	gfpCarry(c, carry)
+}
+
+// TODO: Optimize these functions as for now all it's doing is to convert in big.Int
+// and use big integer arithmetic
+// Computes c = a^{exp} in Fp (so mod p)
+func gfpExp(a *gfP, exp, mod *big.Int) *gfP {
+	// Convert the field elements to big.Int
+	aBig := a.gFpToBigInt()
+
+	// Run the big.Int Exp algorithm
+	resBig := new(big.Int).Exp(aBig, exp, mod)
+
+	// Convert the big.Int result back to field element
+	res := newGFpFromBigInt(resBig)
+	return res
+}
+
+func getYFromX(x *gfP) *gfP {
+	xBig := x.gFpToBigInt()
+	curveBBig := bigFromBase10("3")      // E: y^2 = x^3 + 3
+	curveExpBig := bigFromBase10("3")    // E: y^2 = x^3 + 3
+	rhs := big.Exp(xBig, curveExpBig, P) // x^3 mod p
+	rhs.Add(rhs, curveBBig)              // x^3 + 3
+
+	finalExpNum := new(big.Int).Add(P, bigFromBase10("1"))
+	finalExp := new(big.Int).Div(finalExpNum, bigFromBase10("4"))
+	yCoord := new(big.Int).Exp(rhs, finalExp, P)
+	return newGFpFromBigInt(yCoord)
 }
