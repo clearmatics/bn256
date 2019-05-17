@@ -1,11 +1,12 @@
 package bn256
 
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 
 	"math/big"
-	"encoding/hex"
 )
 
 // FpUint64Size is the number of uint64 chunks to represent a field element
@@ -29,30 +30,19 @@ func (e *gfP) String() string {
 	return fmt.Sprintf("%16.16x%16.16x%16.16x%16.16x", e[3], e[2], e[1], e[0])
 }
 
-// TODO: Remove this function. It is useless, we cast just type cast
-/*
-func newGFpFromUint64Array(x [FpUint64Size]uint64) (out *gfP) {
-	out = &gfP{}
-	for i:= 0; i < len(x); i++ {
-		out[i] = x[i]
-	}
-	return out
-}
-*/
-
 // Convert a big.Int into gfP
-func newGFpFromBigInt(in *big.Int) (*gfP) {
+func newGFpFromBigInt(in *big.Int) (out *gfP) {
 	inBytes := in.Bytes()
 
-	res := &gfP{}
+	out = &gfP{}
 	var n uint64
-	for int i:= 0; i < FpUint64Size; i++ {
-		buf := bytes.NewBuffer(inBytes[i*8:(i+1)*8]
+	for i := 0; i < FpUint64Size; i++ {
+		buf := bytes.NewBuffer(inBytes[i*8 : (i+1)*8])
 		binary.Read(buf, binary.BigEndian, &n)
-		res[(FpUint64Size - 1) - i] = n
+		out[(FpUint64Size-1)-i] = n // In gfP field elements are represented as little-endian 64-bit words
 	}
 
-	return res
+	return out
 }
 
 // Convert a gfP into a big.Int
