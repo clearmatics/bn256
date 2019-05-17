@@ -17,6 +17,7 @@ package bn256
 // especially the serialization and deserialization functions for points in G1
 import (
 	"errors"
+	"math/big"
 )
 
 // Constants related to the bn256 pairing friendly curve
@@ -47,7 +48,7 @@ const (
 // The point e is assumed to be given in the affine form
 func (e *G1) IsHigherY() bool {
 	yCopy := &gfP{}
-	yCopy.Set(e.p.y)
+	yCopy.Set(&e.p.y)
 
 	yNeg := &gfP{}
 	gfpNeg(yNeg, yCopy)
@@ -123,6 +124,22 @@ func (e *G1) EncodeUncompressed() []byte {
 	return ret
 }
 
+func getYFromX(x *gfP) *gfP {
+	xBig := x.gFpToBigInt()
+	curveBBig := bigFromBase10("3")               // E: y^2 = x^3 + 3
+	curveExpBig := bigFromBase10("3")             // E: y^2 = x^3 + 3
+	rhs := new(big.Int).Exp(xBig, curveExpBig, P) // x^3 mod p
+	rhs.Add(rhs, curveBBig)                       // x^3 + 3
+
+	// x = b^{(p+1)/4} is a solution to x^2 % p = b
+	// Since Fp is such that p = 3 mod 4
+	finalExpNum := new(big.Int).Add(P, bigFromBase10("1"))
+	finalExp := new(big.Int).Div(finalExpNum, bigFromBase10("4"))
+	yCoord := new(big.Int).Exp(rhs, finalExp, P)
+
+	return newGFpFromBigInt(yCoord)
+}
+
 // DecodeCompressed decodes a point in the compressed form
 func (e *G1) DecodeCompressed(encoding []byte) error {
 	if len(encoding) != G1UncompressedSize {
@@ -163,7 +180,7 @@ func (e *G1) DecodeCompressed(encoding []byte) error {
 
 	// Decompress the point P (P =/= ∞)
 	var err error
-	if err = e.p.x.Unmarshal(m); err != nil {
+	if err = e.p.x.Unmarshal(encoding); err != nil {
 		return err
 	}
 
@@ -172,7 +189,9 @@ func (e *G1) DecodeCompressed(encoding []byte) error {
 	// Then x = b^{(p+1)/4} is a solution to x^2 % p = b
 	// see: https://en.wikipedia.org/wiki/Tonelli%E2%80%93Shanks_algorithm for details on the Tonelli–Shanks algorithm
 	// see: https://en.wikipedia.org/wiki/Cipolla%27s_algorithm for details on the Cipolla-Lehmer algorithm
-	e.p.y = *getYFromX(e.p.x)
+	y := getYFromX(&e.p.x)
+	e.p.y = *y
+
 	montEncode(&e.p.x, &e.p.x)
 	montEncode(&e.p.y, &e.p.y)
 
@@ -184,7 +203,7 @@ func (e *G1) DecodeCompressed(encoding []byte) error {
 		}
 	} else {
 		if bin[0]&serializationBigY == 0 { // The point given by getYFromX is the higher but the mask is not set for higher y
-			e.Neg()
+			e.Neg(e)
 		}
 	}
 
