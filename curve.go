@@ -206,10 +206,12 @@ func (c *curvePoint) Mul(a *curvePoint, scalar *big.Int) {
 	c.Set(sum)
 }
 
+// Transforms Jacobian coordinates to Affine coordinates
+// (X' : Y' : Z) -> (X'/(Z^2) : Y'/(Z^3) : 1) 
 func (c *curvePoint) MakeAffine() {
 	if c.z == *newGFp(1) {
 		return
-	} else if c.z == *newGFp(0) {
+	} else if c.z == *newGFp(0) { // return point at infinity if z = 0
 		c.x = gfP{0}
 		c.y = *newGFp(1)
 		c.t = gfP{0}
@@ -220,11 +222,11 @@ func (c *curvePoint) MakeAffine() {
 	zInv.Invert(&c.z)
 
 	t, zInv2 := &gfP{}, &gfP{}
-	gfpMul(t, &c.y, zInv)
-	gfpMul(zInv2, zInv, zInv)
+	gfpMul(t, &c.y, zInv) // t = y/z
+	gfpMul(zInv2, zInv, zInv) // zInv2 = 1/(z^2)
 
-	gfpMul(&c.x, &c.x, zInv2)
-	gfpMul(&c.y, t, zInv2)
+	gfpMul(&c.x, &c.x, zInv2) // x = x/(z^2)
+	gfpMul(&c.y, t, zInv2) // y = y/(z^3)
 
 	c.z = *newGFp(1)
 	c.t = *newGFp(1)
