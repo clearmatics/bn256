@@ -61,11 +61,11 @@ func TestGFpMul(t *testing.T) {
 
 // Tests the conversion from big.Int to GFp element
 func TestNewGFpFromBigInt(t *testing.T) {
-	h := newGFpFromBigInt(P)
+	h := *newGFpFromBigInt(P)
 	w := gfP(p2)
 
-	if *h != w {
-		t.Errorf("conversion mismatch: have %#x, want %#x", *h, w)
+	if h != w {
+		t.Errorf("conversion mismatch: have %#x, want %#x", h, w)
 	}
 }
 
