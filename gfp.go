@@ -33,6 +33,8 @@ func (e *gfP) String() string {
 // Convert a big.Int into gfP
 func newGFpFromBigInt(in *big.Int) (out *gfP) {
 	inBytes := in.Bytes()
+	// TODO: Add assertion to test the size of the byte array
+	// and make sure I have something of 256bits or less (can add a padding if needed)
 
 	out = &gfP{}
 	var n uint64
@@ -115,5 +117,8 @@ func (e *gfP) Unmarshal(in []byte) error {
 	return errors.New("bn256: coordinate equals modulus")
 }
 
+// In Montgomery representation, an element x is represented by xR mod p, where
+// R is a power of 2 corresponding to the number of machine-words that can contain p.
+// (where p is the characteristic of the prime field we work over)
 func montEncode(c, a *gfP) { gfpMul(c, a, r2) }
 func montDecode(c, a *gfP) { gfpMul(c, a, &gfP{1}) }
