@@ -17,13 +17,14 @@ package bn256
 // especially the serialization and deserialization functions for points in G1
 import (
 	"errors"
+	"fmt"
 	"math/big"
 )
 
 // Constants related to the bn256 pairing friendly curve
 const (
 	FqElementSize      = 32
-	G1CompressedSize   = FqElementSize
+	G1CompressedSize   = FqElementSize + 1
 	G1UncompressedSize = 2 * FqElementSize
 )
 
@@ -64,26 +65,43 @@ func (e *G1) IsHigherY() bool {
 	return false
 }
 
+// Util function to compare field elements. Should be defined in gfP files
+// Compares 2 gfP
+// Returns 1 if a > b; 0 if a == b; -1 if a < b
+func gfpComp(a, b *gfP) int {
+	for i := FpUint64Size - 1; i >= 0; i-- { // Remember that the gfP elements are written as little-endian 64-bit words
+		if a[i] > b[i] { // As soon as we figure out that the MSByte of A > MSByte of B, we return
+			return 1
+		} else if a[i] == b[i] { // If the current bytes are equal we continue as we cannot conclude on A and B relation
+			continue
+		} else { // a[i] < b[i] so we can directly conclude and we return
+			return -1
+		}
+	}
+	return 0
+}
+
 // EncodeCompressed converts the compressed point e into bytes
 func (e *G1) EncodeCompressed() []byte {
-	// Each value is a 256-bit number.
-	const numBytes = G1CompressedSize
+	fmt.Printf("== [EncodeCompressed - DEBUG] e.p.x: %#x\n", e.p.x)
+	fmt.Printf("== [EncodeCompressed - DEBUG] e.p.y: %#x\n", e.p.y)
 
 	e.p.MakeAffine()
-	// The +1 accounts for the additional byte used for the flags/masks of the encoding
-	ret := make([]byte, numBytes+1)
+	ret := make([]byte, G1CompressedSize)
 
 	// Flag the encoding with the compressed flag
 	ret[0] |= serializationCompressed
 
 	if e.p.IsInfinity() {
 		// Flag the encoding with the infinity flag
+		fmt.Println("== [EncodeCompressed - DEBUG] Setting flag for infinity point")
 		ret[0] |= serializationInfinity
 		return ret
 	}
 
 	if e.IsHigherY() {
 		// Flag the encoding with the bigY flag
+		fmt.Println("== [EncodeCompressed - DEBUG] Setting flag for BigY point")
 		ret[0] |= serializationBigY
 	}
 
@@ -99,12 +117,10 @@ func (e *G1) EncodeCompressed() []byte {
 
 // EncodeUncompressed converts the compressed point e into bytes
 func (e *G1) EncodeUncompressed() []byte {
-	// Each value is a 256-bit number.
-	const numBytes = G1UncompressedSize
 
 	e.p.MakeAffine()
 	// The +1 accounts for the additional byte used for the flags/masks of the encoding
-	ret := make([]byte, numBytes+1)
+	ret := make([]byte, G1UncompressedSize)
 
 	if e.p.IsInfinity() {
 		// Flag the encoding with the infinity flag
@@ -119,13 +135,15 @@ func (e *G1) EncodeUncompressed() []byte {
 	montDecode(temp, &e.p.x)
 	temp.Marshal(ret[1:])
 	montDecode(temp, &e.p.y)
-	temp.Marshal(ret[numBytes+1:])
+	temp.Marshal(ret[G1CompressedSize:])
 
 	return ret
 }
 
 func getYFromX(x *gfP) *gfP {
-	xBig := x.gFpToBigInt()
+	xCopy := gfP{}
+	xCopy.Set(x)
+	xBig := xCopy.gFpToBigInt()
 	curveBBig := bigFromBase10("3")               // E: y^2 = x^3 + 3
 	curveExpBig := bigFromBase10("3")             // E: y^2 = x^3 + 3
 	rhs := new(big.Int).Exp(xBig, curveExpBig, P) // x^3 mod p
@@ -142,10 +160,11 @@ func getYFromX(x *gfP) *gfP {
 
 // DecodeCompressed decodes a point in the compressed form
 func (e *G1) DecodeCompressed(encoding []byte) error {
-	if len(encoding) != G1UncompressedSize {
+	fmt.Printf("== [DecodeCompressed - DEBUG] value of encoding input: %#x\n", encoding)
+	if len(encoding) != G1CompressedSize {
 		return errors.New("wrong encoded point size")
 	}
-	if (encoding[0]&serializationCompressed == 0) && (len(encoding) < G1UncompressedSize) { // Also test the length of the encoding to make sure it is 33bytes
+	if encoding[0]&serializationCompressed == 0 { // Also test the length of the encoding to make sure it is 33bytes
 		return errors.New("point isn't compressed")
 	}
 
@@ -156,7 +175,7 @@ func (e *G1) DecodeCompressed(encoding []byte) error {
 		e.p.x, e.p.y = gfP{0}, gfP{0}
 	}
 
-	bin := make([]byte, G1CompressedSize+1)
+	bin := make([]byte, G1CompressedSize)
 	copy(bin, encoding)
 	// Removes the bits of the masking (This does a bitwise AND with `0001 1111`)
 	// And thus removes the first 3 bits corresponding to the masking
@@ -174,15 +193,32 @@ func (e *G1) DecodeCompressed(encoding []byte) error {
 				return errors.New("invalid infinity encoding")
 			}
 		}
+		fmt.Println("== [DecodeCompressed - DEBUG] Setting point at infinity!!")
 		e.p.SetInfinity()
 		return nil
 	}
 
 	// Decompress the point P (P =/= ∞)
 	var err error
-	if err = e.p.x.Unmarshal(encoding); err != nil {
+	fmt.Printf("Value of bin: %#x\n", bin)
+	fmt.Printf("Value of bin[1:]: %#x\n", bin[1:])
+	// Test
+	/*
+		tres := new(gfP)
+		_ = tres.Unmarshal(bin[1:])
+		fmt.Printf("== [DecodeCompressed] value of tres: %#x\n", tres)
+		montEncode(tres, tres)
+		fmt.Printf("== [DecodeCompressed] value of tres after montgomery encoding: %#x\n", tres)
+		for i := 0; i < 4; i++ {
+			fmt.Printf("--> %#x\n", tres[i])
+		}
+	*/
+	//
+	if err = e.p.x.Unmarshal(bin[1:]); err != nil {
 		return err
 	}
+	//e.p.x.Set(tres)
+	//fmt.Printf("== [DecodeCompressed] value of e.p.x before montEncode: %#x\n", e.p.x)
 
 	// Now, to compute y from x, we leverage the fact that p = 3 mod 4
 	// In fact, 21888242871839275222246405745257275088696311157297823662689037894645226208583 % 4 = 3
@@ -193,6 +229,7 @@ func (e *G1) DecodeCompressed(encoding []byte) error {
 	e.p.y = *y
 
 	montEncode(&e.p.x, &e.p.x)
+	//fmt.Printf("== [DecodeCompressed] value of e.p.x after montEncode: %#x\n", e.p.x)
 	montEncode(&e.p.y, &e.p.y)
 
 	// The flag serializationBigY is set (so the point pt with the higher Y is encoded)
