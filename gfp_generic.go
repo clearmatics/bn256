@@ -27,7 +27,7 @@ func gfpCarry(a *gfP, head uint64) {
 
 func gfpNeg(c, a *gfP) {
 	var carry uint64
-	for i, pi := range p2 {
+	for i, pi := range p2 { // p2 being the prime that defines the base/prime field
 		ai := a[i]
 		ci := pi - ai - carry
 		c[i] = ci
@@ -172,6 +172,21 @@ func gfpMul(c, a, b *gfP) {
 
 	*c = gfP{T[4], T[5], T[6], T[7]}
 	gfpCarry(c, carry)
+}
+
+// Compares 2 gfP
+// Returns 1 if a > b; 0 if a == b; -1 if a < b
+func gfpComp(a, b *gfP) int {
+	for i := FpUint64Size - 1; i >= 0; i-- { // Remember that the gfP elements are written as little-endian 64-bit words
+		if a[i] > b[i] { // As soon as we figure out that the MSByte of A > MSByte of B, we return
+			return 1
+		} else if a[i] == b[i] { // If the current bytes are equal we continue as we cannot conclude on A and B relation
+			continue
+		} else { // a[i] < b[i] so we can directly conclude and we return
+			return -1
+		}
+	}
+	return 0
 }
 
 // TODO: Optimize these functions as for now all it's doing is to convert in big.Int
