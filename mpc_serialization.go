@@ -54,7 +54,7 @@ func (e *G1) IsHigherY() bool {
 	yNeg := &gfP{}
 	gfpNeg(yNeg, yCopy)
 
-	for i := 0; i < FpUint64Size; i++ {
+	for i := FpUint64Size - 1; i >= 0; i-- { // See gfpComp: We are dealing with little-endian 64-bit words!
 		if yCopy[i] > yNeg[i] {
 			return true
 		} else if yCopy[i] < yNeg[i] {
@@ -140,22 +140,45 @@ func (e *G1) EncodeUncompressed() []byte {
 	return ret
 }
 
-func getYFromX(x *gfP) *gfP {
-	xCopy := gfP{}
-	xCopy.Set(x)
-	xBig := xCopy.gFpToBigInt()
-	curveBBig := bigFromBase10("3")               // E: y^2 = x^3 + 3
-	curveExpBig := bigFromBase10("3")             // E: y^2 = x^3 + 3
-	rhs := new(big.Int).Exp(xBig, curveExpBig, P) // x^3 mod p
-	rhs.Add(rhs, curveBBig)                       // x^3 + 3
+func getYFromX(x *gfP) (*gfP, error) {
+	fmt.Printf("Value x: %s\n", x.String())
+	x2 := &gfP{}
+	gfpMul(x2, x, x)
+	fmt.Printf("Value x2: %s\n", x2.String())
+	x3 := &gfP{}
+	gfpMul(x3, x2, x)
+	fmt.Printf("Value x3: %s\n", x3.String())
 
-	// x = b^{(p+1)/4} is a solution to x^2 % p = b
-	// Since Fp is such that p = 3 mod 4
-	finalExpNum := new(big.Int).Add(P, bigFromBase10("1"))
-	finalExp := new(big.Int).Div(finalExpNum, bigFromBase10("4"))
-	yCoord := new(big.Int).Exp(rhs, finalExp, P)
+	rhs := &gfP{}
+	gfpAdd(rhs, x3, curveB)
+	fmt.Printf("Value rhs: %s\n", rhs.String())
 
-	return newGFpFromBigInt(yCoord)
+	/*
+		exponent := &gfP{}
+		oneOver4 := &gfP{} // 1/4
+		pGFp := gfP(p2)
+		gfpAdd(exponent, &pGFp, newGFp(1)) // (p+1)
+		four := newGFp(4)
+		oneOver4.Invert(four)
+		gfpMul(exponent, exponent, oneOver4) // (p+1) / 4
+
+		// We convert into Big.Int to get the ModSqrt
+		exponentBig := exponent.gFpToBigInt()
+	*/
+	rhsBig := rhs.gFpToBigInt()
+	fmt.Println("After rhsBig")
+
+	// Note, if we use the ModSqrt method, we don't need the exponent, so we can comment these lines
+	yCoord := big.NewInt(0)
+	res := yCoord.ModSqrt(rhsBig, P)
+	if res == nil {
+		return nil, errors.New("not a square mod P")
+	}
+
+	yCoordGFp := newGFpFromBigInt(yCoord)
+	fmt.Println("After yCoordGFp")
+
+	return yCoordGFp, nil
 }
 
 // DecodeCompressed decodes a point in the compressed form
@@ -225,7 +248,10 @@ func (e *G1) DecodeCompressed(encoding []byte) error {
 	// Then x = b^{(p+1)/4} is a solution to x^2 % p = b
 	// see: https://en.wikipedia.org/wiki/Tonelli%E2%80%93Shanks_algorithm for details on the Tonelli–Shanks algorithm
 	// see: https://en.wikipedia.org/wiki/Cipolla%27s_algorithm for details on the Cipolla-Lehmer algorithm
-	y := getYFromX(&e.p.x)
+	y, err := getYFromX(&e.p.x)
+	if err != nil {
+		return err
+	}
 	e.p.y = *y
 
 	montEncode(&e.p.x, &e.p.x)
