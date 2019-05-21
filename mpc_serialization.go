@@ -23,8 +23,8 @@ import (
 // Constants related to the bn256 pairing friendly curve
 const (
 	FqElementSize      = 32
-	G1CompressedSize   = FqElementSize + 1
-	G1UncompressedSize = 2 * FqElementSize
+	G1CompressedSize   = FqElementSize + 1   // + 1 accounts for the additional byte used for masking
+	G1UncompressedSize = 2*FqElementSize + 1 // + 1 accounts for the additional byte used for masking
 )
 
 // https://github.com/ebfull/pairing/tree/master/src/bls12_381#serialization
