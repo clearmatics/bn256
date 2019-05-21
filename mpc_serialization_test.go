@@ -103,7 +103,6 @@ func TestIsHigherY(t *testing.T) {
 	}
 }
 
-/*
 func TestGetYFromX(t *testing.T) {
 	// We know that the generator of the curve is P = (x: 1, y: 2, z: 1, t: 1)
 	// We take x = 1 and we see if we retrieve P such that y = 2 or -P such that y' = Inv(2)
@@ -112,10 +111,10 @@ func TestGetYFromX(t *testing.T) {
 	assert.Nil(t, err)
 
 	smallY := newGFp(2)
+	fmt.Printf("Value smallY: %s\n", smallY.String())
 	bigY := &gfP{}
 	gfpNeg(bigY, smallY)
 
 	testCondition := (*yRetrieved == *smallY) || (*yRetrieved == *bigY)
 	assert.True(t, testCondition, "The retrieved Y should either equal 2 or Inv(2)")
 }
-*/

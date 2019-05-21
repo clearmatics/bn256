@@ -54,6 +54,7 @@ func (e *G1) IsHigherY() bool {
 	yNeg := &gfP{}
 	gfpNeg(yNeg, yCopy)
 
+	// TODO: Use the gfpCmp function instead of re-implementing the loop here
 	for i := FpUint64Size - 1; i >= 0; i-- { // See gfpComp: We are dealing with little-endian 64-bit words!
 		if yCopy[i] > yNeg[i] {
 			return true
@@ -153,18 +154,14 @@ func getYFromX(x *gfP) (*gfP, error) {
 	gfpAdd(rhs, x3, curveB)
 	fmt.Printf("Value rhs: %s\n", rhs.String())
 
-	/*
-		exponent := &gfP{}
-		oneOver4 := &gfP{} // 1/4
-		pGFp := gfP(p2)
-		gfpAdd(exponent, &pGFp, newGFp(1)) // (p+1)
-		four := newGFp(4)
-		oneOver4.Invert(four)
-		gfpMul(exponent, exponent, oneOver4) // (p+1) / 4
+	// Montgomery encode rhs
+	// Needed because when we create a GFp element
+	// with gfP{}, then it is not montEncoded. However
+	// if we create an element of GFp by using `newGFp()`
+	// then this field element is Montgomery encoded
+	montEncode(rhs, rhs)
+	fmt.Printf("Value MontEncoded: %s\n", rhs.String())
 
-		// We convert into Big.Int to get the ModSqrt
-		exponentBig := exponent.gFpToBigInt()
-	*/
 	rhsBig := rhs.gFpToBigInt()
 	fmt.Println("After rhsBig")
 
