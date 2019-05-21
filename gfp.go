@@ -30,14 +30,55 @@ func (e *gfP) String() string {
 	return fmt.Sprintf("%16.16x%16.16x%16.16x%16.16x", e[3], e[2], e[1], e[0])
 }
 
+/*
+func byteToUint64(in []byte) (uint64, error) {
+	if len(in) > 8 {
+		return 0, errors.New("the input bytes length should be equal to 8 (or smaller)")
+	}
+
+	// Takes the bytes in the little endian order
+	// The byte 0x64 translate in a uint64 of the shape 0x64 (= 0x0000000000000064) rather than 0x6400000000000000
+	res := binary.LittleEndian.Uint64(in)
+	return res, nil
+}
+*/
+
+// Makes sure that the
+func padBytes(bb []byte) ([]byte, error) {
+	if len(bb) > 32 {
+		return []byte{}, errors.New("Cannot pad the given byte slice as the length exceed the padding length")
+	}
+
+	if len(bb) == 32 {
+		return bb, nil
+	}
+
+	padSlice := make([]byte, 32)
+	index := len(padSlice) - len(bb)
+	copy(padSlice[index:], bb)
+	return padSlice, nil
+}
+
 // Convert a big.Int into gfP
 func newGFpFromBigInt(in *big.Int) (out *gfP) {
+	// in >= P, so we mod it to get back in the field
+	// (ie: we get the smallest representative of the equivalence class mod P)
+	if res := in.Cmp(P); res >= 0 {
+		// We need to mod P to get back into the field
+		in.Mod(in, P)
+	}
+
 	inBytes := in.Bytes()
-	// TODO: Add assertion to test the size of the byte array
-	// and make sure I have something of 256bits or less (can add a padding if needed)
+	// We want to work on byte slices of length 32 to re-assemble our GFpe element
+	if len(inBytes) < 32 {
+		// Safe to ignore the err as we are in the if so the condition is satisfied
+		inBytes, _ = padBytes(inBytes)
+	}
 
 	out = &gfP{}
 	var n uint64
+	// Now we have the guarantee that inBytes has length 32 so it makes sense to run this for
+	// loop safely (we won't exceed the boundaries of the container)
 	for i := 0; i < FpUint64Size; i++ {
 		buf := bytes.NewBuffer(inBytes[i*8 : (i+1)*8])
 		binary.Read(buf, binary.BigEndian, &n)
@@ -45,6 +86,14 @@ func newGFpFromBigInt(in *big.Int) (out *gfP) {
 	}
 
 	return out
+}
+
+// Returns a new element of GFp montgomery encoded
+func newMontEncodedGFpFromBigInt(in *big.Int) *gfP {
+	res := newGFpFromBigInt(in)
+	montEncode(res, res)
+
+	return res
 }
 
 // Convert a gfP into a big.Int
@@ -120,5 +169,6 @@ func (e *gfP) Unmarshal(in []byte) error {
 // In Montgomery representation, an element x is represented by xR mod p, where
 // R is a power of 2 corresponding to the number of machine-words that can contain p.
 // (where p is the characteristic of the prime field we work over)
+// See: https://web.wpi.edu/Pubs/ETD/Available/etd-0430102-120529/unrestricted/thesis.pdf
 func montEncode(c, a *gfP) { gfpMul(c, a, r2) }
 func montDecode(c, a *gfP) { gfpMul(c, a, &gfP{1}) }
