@@ -117,6 +117,8 @@ func (e *G1) EncodeCompressed() []byte {
 }
 
 // EncodeUncompressed converts the compressed point e into bytes
+// Take a point P in Jacobian form (where each coordinate is MontEncoded)
+// and encodes it by going back to affine coordinates and montDecode all coordinates
 func (e *G1) EncodeUncompressed() []byte {
 
 	e.p.MakeAffine()
@@ -141,29 +143,32 @@ func (e *G1) EncodeUncompressed() []byte {
 	return ret
 }
 
-func getYFromX(x *gfP) (*gfP, error) {
-	fmt.Printf("Value x: %s\n", x.String())
+// Takes a MontEncoded x and finds the corresponding y (one of the two possible y's)
+func getYFromMontEncodedX(x *gfP) (*gfP, error) {
+	// Operations on montgomery encoded field elements
 	x2 := &gfP{}
 	gfpMul(x2, x, x)
-	fmt.Printf("Value x2: %s\n", x2.String())
+
 	x3 := &gfP{}
 	gfpMul(x3, x2, x)
-	fmt.Printf("Value x3: %s\n", x3.String())
 
 	rhs := &gfP{}
-	gfpAdd(rhs, x3, curveB)
-	fmt.Printf("Value rhs: %s\n", rhs.String())
+	gfpAdd(rhs, x3, curveB) // curveB is MontEncoded, since it is create with newGFp
 
-	// Montgomery encode rhs
+	// Montgomery decode rhs
 	// Needed because when we create a GFp element
 	// with gfP{}, then it is not montEncoded. However
 	// if we create an element of GFp by using `newGFp()`
 	// then this field element is Montgomery encoded
-	montEncode(rhs, rhs)
-	fmt.Printf("Value MontEncoded: %s\n", rhs.String())
-
+	// Above, we have been working on Montgomery encoded field elements
+	// here we solve the quad. resid. over F (not encoded)
+	// and then we encode back and return the encoded result
+	//
+	// Eg:
+	// - Px := &gfP{1} => 0000000000000000000000000000000000000000000000000000000000000001
+	// - PxNew := newGFp(1) => 0e0a77c19a07df2f666ea36f7879462c0a78eb28f5c70b3dd35d438dc58f0d9d
+	montDecode(rhs, rhs)
 	rhsBig := rhs.gFpToBigInt()
-	fmt.Println("After rhsBig")
 
 	// Note, if we use the ModSqrt method, we don't need the exponent, so we can comment these lines
 	yCoord := big.NewInt(0)
@@ -173,12 +178,14 @@ func getYFromX(x *gfP) (*gfP, error) {
 	}
 
 	yCoordGFp := newGFpFromBigInt(yCoord)
-	fmt.Println("After yCoordGFp")
+	montEncode(yCoordGFp, yCoordGFp)
 
 	return yCoordGFp, nil
 }
 
 // DecodeCompressed decodes a point in the compressed form
+// Take a point P encoded (ie: written in affine form where each coordinate is MontDecoded)
+// and encodes it by going back to Jacobian coordinates and montEncode all coordinates
 func (e *G1) DecodeCompressed(encoding []byte) error {
 	fmt.Printf("== [DecodeCompressed - DEBUG] value of encoding input: %#x\n", encoding)
 	if len(encoding) != G1CompressedSize {
@@ -193,13 +200,15 @@ func (e *G1) DecodeCompressed(encoding []byte) error {
 		e.p = &curvePoint{}
 	} else {
 		e.p.x, e.p.y = gfP{0}, gfP{0}
+		e.p.z, e.p.t = *newGFp(1), *newGFp(1)
 	}
 
-	bin := make([]byte, G1CompressedSize)
-	copy(bin, encoding)
 	// Removes the bits of the masking (This does a bitwise AND with `0001 1111`)
 	// And thus removes the first 3 bits corresponding to the masking
-	bin[0] &= serializationMask
+	// Useless for now because in bn256, we added a full byte to enable masking
+	// However, this is needed if we work over BLS12 and its underlying field
+	bin := make([]byte, G1CompressedSize)
+	copy(bin, encoding)
 
 	// Decode the point at infinity in the compressed form
 	if encoding[0]&serializationInfinity != 0 {
@@ -220,49 +229,26 @@ func (e *G1) DecodeCompressed(encoding []byte) error {
 
 	// Decompress the point P (P =/= ∞)
 	var err error
-	fmt.Printf("Value of bin: %#x\n", bin)
-	fmt.Printf("Value of bin[1:]: %#x\n", bin[1:])
-	// Test
-	/*
-		tres := new(gfP)
-		_ = tres.Unmarshal(bin[1:])
-		fmt.Printf("== [DecodeCompressed] value of tres: %#x\n", tres)
-		montEncode(tres, tres)
-		fmt.Printf("== [DecodeCompressed] value of tres after montgomery encoding: %#x\n", tres)
-		for i := 0; i < 4; i++ {
-			fmt.Printf("--> %#x\n", tres[i])
-		}
-	*/
-	//
 	if err = e.p.x.Unmarshal(bin[1:]); err != nil {
 		return err
 	}
-	//e.p.x.Set(tres)
-	//fmt.Printf("== [DecodeCompressed] value of e.p.x before montEncode: %#x\n", e.p.x)
 
-	// Now, to compute y from x, we leverage the fact that p = 3 mod 4
-	// In fact, 21888242871839275222246405745257275088696311157297823662689037894645226208583 % 4 = 3
-	// Then x = b^{(p+1)/4} is a solution to x^2 % p = b
-	// see: https://en.wikipedia.org/wiki/Tonelli%E2%80%93Shanks_algorithm for details on the Tonelli–Shanks algorithm
-	// see: https://en.wikipedia.org/wiki/Cipolla%27s_algorithm for details on the Cipolla-Lehmer algorithm
-	y, err := getYFromX(&e.p.x)
+	// MontEncode our field elements for fast finite field arithmetic
+	montEncode(&e.p.x, &e.p.x)
+	y, err := getYFromMontEncodedX(&e.p.x)
 	if err != nil {
 		return err
 	}
 	e.p.y = *y
 
-	montEncode(&e.p.x, &e.p.x)
-	//fmt.Printf("== [DecodeCompressed] value of e.p.x after montEncode: %#x\n", e.p.x)
-	montEncode(&e.p.y, &e.p.y)
-
 	// The flag serializationBigY is set (so the point pt with the higher Y is encoded)
 	// but the point e retrieved from the `getYFromX` is NOT the higher, then we inverse
 	if !e.IsHigherY() {
-		if bin[0]&serializationBigY != 0 {
+		if encoding[0]&serializationBigY != 0 {
 			e.Neg(e)
 		}
 	} else {
-		if bin[0]&serializationBigY == 0 { // The point given by getYFromX is the higher but the mask is not set for higher y
+		if encoding[0]&serializationBigY == 0 { // The point given by getYFromX is the higher but the mask is not set for higher y
 			e.Neg(e)
 		}
 	}

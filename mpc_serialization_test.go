@@ -15,7 +15,6 @@ func assertGFpEqual(t *testing.T, a, b *gfP) {
 	}
 }
 
-/*
 func TestEncodeCompressed(t *testing.T) {
 	// Create random point (Jacobian form)
 	_, GaInit, err := RandomG1(rand.Reader)
@@ -49,21 +48,16 @@ func TestEncodeCompressed(t *testing.T) {
 	Gb1 := new(G1)
 	_, err = Gb1.Unmarshal(marshalled)
 	assert.Nil(t, err)
-	assertGFpEqual(t, &GaAffine.p.x, &Gb1.p.x)
-	assertGFpEqual(t, &GaAffine.p.y, &Gb1.p.y)
-	//assert.Equal(t, GaAffine.p.x, Gb1.p.x, "The x-coord of the unmarshalled point should equal the x-coord of the intial point")
-	//assert.Equal(t, GaAffine.p.y, Gb1.p.y, "The y-coord of the unmarshalled point should equal the y-coord of the intial point")
+	assert.Equal(t, GaAffine.p.x.String(), Gb1.p.x.String(), "The x-coord of the unmarshalled point should equal the x-coord of the intial point")
+	assert.Equal(t, GaAffine.p.y.String(), Gb1.p.y.String(), "The y-coord of the unmarshalled point should equal the y-coord of the intial point")
 
 	// Decode the point Ga with the decodeCompress function
 	Gb2 := new(G1)
 	err = Gb2.DecodeCompressed(compressed)
 	assert.Nil(t, err)
-	assertGFpEqual(t, &GaAffine.p.x, &Gb2.p.x)
-	assertGFpEqual(t, &GaAffine.p.y, &Gb2.p.y)
-	//assert.Equal(t, GaAffine.p.x, Gb2.p.x, "The x-coord of the decompressed point should equal the x-coord of the intial point")
-	//assert.Equal(t, GaAffine.p.y, Gb2.p.y, "The y-coord of the decompressed point should equal the y-coord of the intial point")
+	assert.Equal(t, GaAffine.p.x.String(), Gb2.p.x.String(), "The x-coord of the decompressed point should equal the x-coord of the intial point")
+	assert.Equal(t, GaAffine.p.y.String(), Gb2.p.y.String(), "The y-coord of the decompressed point should equal the y-coord of the intial point")
 }
-*/
 
 func TestIsHigherY(t *testing.T) {
 	_, Ga, err := RandomG1(rand.Reader)
@@ -103,18 +97,23 @@ func TestIsHigherY(t *testing.T) {
 	}
 }
 
-func TestGetYFromX(t *testing.T) {
+func TestGetYFromMontEncodedX(t *testing.T) {
 	// We know that the generator of the curve is P = (x: 1, y: 2, z: 1, t: 1)
 	// We take x = 1 and we see if we retrieve P such that y = 2 or -P such that y' = Inv(2)
-	Px := newGFp(1)
-	yRetrieved, err := getYFromX(Px)
+
+	// Create the GFp element 1 and MontEncode it
+	PxMontEncoded := newGFp(1)
+	yRetrieved, err := getYFromMontEncodedX(PxMontEncoded)
 	assert.Nil(t, err)
 
-	smallY := newGFp(2)
-	fmt.Printf("Value smallY: %s\n", smallY.String())
-	bigY := &gfP{}
-	gfpNeg(bigY, smallY)
+	smallYMontEncoded := newGFp(2)
+	bigYMontEncoded := &gfP{}
+	gfpNeg(bigYMontEncoded, smallYMontEncoded)
 
-	testCondition := (*yRetrieved == *smallY) || (*yRetrieved == *bigY)
+	testCondition := (*yRetrieved == *smallYMontEncoded) || (*yRetrieved == *bigYMontEncoded)
 	assert.True(t, testCondition, "The retrieved Y should either equal 2 or Inv(2)")
+
+	t.Log(fmt.Sprintf("*yRetrieved = %s", yRetrieved.String()))
+	t.Log(fmt.Sprintf("*yRetrieved == *smallYMontEncoded: %t", (*yRetrieved == *smallYMontEncoded)))
+	t.Log(fmt.Sprintf("*yRetrieved == *bigYMontEncoded: %t", (*yRetrieved == *bigYMontEncoded)))
 }
