@@ -61,8 +61,10 @@ func TestGFpMul(t *testing.T) {
 
 // Tests the conversion from big.Int to GFp element
 func TestNewGFpFromBigInt(t *testing.T) {
-	h := *newGFpFromBigInt(P)
-	w := gfP(p2)
+	twoBig := bigFromBase10("2")
+	h := *newGFpFromBigInt(twoBig)
+	twoHex := [4]uint64{0x0000000000000002, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000}
+	w := gfP(twoHex)
 
 	if h != w {
 		t.Errorf("conversion mismatch: have %#x, want %#x", h, w)
@@ -71,9 +73,11 @@ func TestNewGFpFromBigInt(t *testing.T) {
 
 // Tests the conversion from GFp element to big.Int
 func TestGFpToBigInt(t *testing.T) {
-	a := gfP(p2)
-	w := P
-	h := a.gFpToBigInt()
+	twoHex := [4]uint64{0x0000000000000002, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000}
+	twoBig := bigFromBase10("2")
+	twoGFp := gfP(twoHex)
+	w := twoBig
+	h := twoGFp.gFpToBigInt()
 
 	if r := h.Cmp(w); r != 0 {
 		t.Errorf("conversion mismatch: have %#x, want %#x", h.String(), w.String())
