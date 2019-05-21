@@ -206,6 +206,7 @@ func (e *G1) DecodeCompressed(encoding []byte) error {
 	}
 
 	// MontEncode our field elements for fast finite field arithmetic
+	// Needs to be done since the z and t coordinates are also encoded (ie: created with newGFp)
 	montEncode(&e.p.x, &e.p.x)
 	y, err := getYFromMontEncodedX(&e.p.x)
 	if err != nil {
@@ -224,6 +225,64 @@ func (e *G1) DecodeCompressed(encoding []byte) error {
 			e.Neg(e)
 		}
 	}
+
+	return nil
+}
+
+// DecodeUncompressed decodes a point in the uncompressed form
+// Take a point P encoded (ie: written in affine form where each coordinate is MontDecoded)
+// and encodes it by going back to Jacobian coordinates and montEncode all coordinates
+func (e *G1) DecodeUncompressed(encoding []byte) error {
+	if len(encoding) != G1UncompressedSize {
+		return errors.New("wrong encoded point size")
+	}
+	if encoding[0]&serializationCompressed != 0 { // Also test the length of the encoding to make sure it is 65bytes
+		return errors.New("point is compressed")
+	}
+	if encoding[0]&serializationBigY != 0 { // Also test that the bigY flag if not set
+		return errors.New("bigY flag should not be set")
+	}
+
+	// Unmarshal the points and check their caps
+	if e.p == nil {
+		e.p = &curvePoint{}
+	} else {
+		e.p.x, e.p.y = gfP{0}, gfP{0}
+		e.p.z, e.p.t = *newGFp(1), *newGFp(1)
+	}
+
+	// Removes the bits of the masking (This does a bitwise AND with `0001 1111`)
+	// And thus removes the first 3 bits corresponding to the masking
+	// Useless for now because in bn256, we added a full byte to enable masking
+	// However, this is needed if we work over BLS12 and its underlying field
+	bin := make([]byte, G1CompressedSize)
+	copy(bin, encoding)
+
+	// Decode the point at infinity in the compressed form
+	if encoding[0]&serializationInfinity != 0 {
+		for i := range bin {
+			if bin[i] != 0 {
+				return errors.New("invalid infinity encoding")
+			}
+		}
+		e.p.SetInfinity()
+		return nil
+	}
+
+	// Decode the point P (P =/= ∞)
+	var err error
+	// Decode the x-coordinate
+	if err = e.p.x.Unmarshal(bin[1:33]); err != nil {
+		return err
+	}
+	// Decode the y-coordinate
+	if err = e.p.y.Unmarshal(bin[33:]); err != nil {
+		return err
+	}
+
+	// MontEncode our field elements for fast finite field arithmetic
+	montEncode(&e.p.x, &e.p.x)
+	montEncode(&e.p.y, &e.p.y)
 
 	return nil
 }
