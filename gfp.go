@@ -166,6 +166,20 @@ func (e *gfP) Unmarshal(in []byte) error {
 	return errors.New("bn256: coordinate equals modulus")
 }
 
+func gfpCmp(a, b *gfP) int {
+	for i := FpUint64Size - 1; i >= 0; i-- { // Remember that the gfP elements are written as little-endian 64-bit words
+		if a[i] > b[i] { // As soon as we figure out that the MSByte of A > MSByte of B, we return
+			return 1
+		} else if a[i] == b[i] { // If the current bytes are equal we continue as we cannot conclude on A and B relation
+			continue
+		} else { // a[i] < b[i] so we can directly conclude and we return
+			return -1
+		}
+	}
+
+	return 0
+}
+
 // In Montgomery representation, an element x is represented by xR mod p, where
 // R is a power of 2 corresponding to the number of machine-words that can contain p.
 // (where p is the characteristic of the prime field we work over)

@@ -85,7 +85,7 @@ func TestIsHigherY(t *testing.T) {
 	assert.Equal(t, *sumYs, *fieldZero, "The y-coordinates of P and -P should add up to zero")
 
 	// Find which point between Ga and GaNeg is the one witht eh higher Y
-	res := gfpComp(&GaNeg.p.y, &Ga.p.y)
+	res := gfpCmp(&GaNeg.p.y, &Ga.p.y)
 	if res > 0 { // GaNeg.p.y > Ga.p.y
 		assert.True(t, GaNeg.IsHigherY(), "GaNeg.IsHigherY should be true if GaNeg.p.y > Ga.p.y")
 		// Test the comparision of the big int also, should be the same result

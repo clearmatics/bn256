@@ -2,8 +2,6 @@
 
 package bn256
 
-import "math/big"
-
 func gfpCarry(a *gfP, head uint64) {
 	b := &gfP{}
 
@@ -174,10 +172,11 @@ func gfpMul(c, a, b *gfP) {
 	gfpCarry(c, carry)
 }
 
-// Compares 2 elements in GFp
+// Util function to compare field elements. Should be defined in gfP files
+// Compares 2 GFp elements
 // Returns 1 if a > b; 0 if a == b; -1 if a < b
-// TODO: Rename gfpCmp to stick to conventional names, Comp is not standard
-func gfpComp(a, b *gfP) int {
+/*
+func gfpCmp(a, b *gfP) int {
 	for i := FpUint64Size - 1; i >= 0; i-- { // Remember that the gfP elements are written as little-endian 64-bit words
 		if a[i] > b[i] { // As soon as we figure out that the MSByte of A > MSByte of B, we return
 			return 1
@@ -187,12 +186,15 @@ func gfpComp(a, b *gfP) int {
 			return -1
 		}
 	}
+
 	return 0
 }
+*/
 
 // TODO: Optimize these functions as for now all it's doing is to convert in big.Int
 // and use big integer arithmetic
 // Computes c = a^{exp} in Fp (so mod p)
+/*
 func gfpExp(a *gfP, exp, mod *big.Int) *gfP {
 	// Convert the field elements to big.Int
 	aBig := a.gFpToBigInt()
@@ -204,3 +206,4 @@ func gfpExp(a *gfP, exp, mod *big.Int) *gfP {
 	res := newGFpFromBigInt(resBig)
 	return res
 }
+*/

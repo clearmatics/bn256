@@ -17,7 +17,6 @@ package bn256
 // especially the serialization and deserialization functions for points in G1
 import (
 	"errors"
-	"fmt"
 	"math/big"
 )
 
@@ -48,45 +47,24 @@ const (
 // that have the same x-coordinate
 // The point e is assumed to be given in the affine form
 func (e *G1) IsHigherY() bool {
-	yCopy := &gfP{}
-	yCopy.Set(&e.p.y)
+	yCoord := &gfP{}
+	yCoord.Set(&e.p.y)
 
-	yNeg := &gfP{}
-	gfpNeg(yNeg, yCopy)
+	yCoordNeg := &gfP{}
+	gfpNeg(yCoordNeg, yCoord)
 
-	// TODO: Use the gfpCmp function instead of re-implementing the loop here
-	for i := FpUint64Size - 1; i >= 0; i-- { // See gfpComp: We are dealing with little-endian 64-bit words!
-		if yCopy[i] > yNeg[i] {
-			return true
-		} else if yCopy[i] < yNeg[i] {
-			return false
-		}
+	res := gfpCmp(yCoord, yCoordNeg)
+	if res == 1 { // yCoord > yCoordNeg
+		return true
+	} else if res == -1 {
+		return false
 	}
 
 	return false
 }
 
-// Util function to compare field elements. Should be defined in gfP files
-// Compares 2 gfP
-// Returns 1 if a > b; 0 if a == b; -1 if a < b
-func gfpComp(a, b *gfP) int {
-	for i := FpUint64Size - 1; i >= 0; i-- { // Remember that the gfP elements are written as little-endian 64-bit words
-		if a[i] > b[i] { // As soon as we figure out that the MSByte of A > MSByte of B, we return
-			return 1
-		} else if a[i] == b[i] { // If the current bytes are equal we continue as we cannot conclude on A and B relation
-			continue
-		} else { // a[i] < b[i] so we can directly conclude and we return
-			return -1
-		}
-	}
-	return 0
-}
-
-// EncodeCompressed converts the compressed point e into bytes
+// EncodeCompressed converts the compressed point e into bytes}
 func (e *G1) EncodeCompressed() []byte {
-	fmt.Printf("== [EncodeCompressed - DEBUG] e.p.x: %#x\n", e.p.x)
-	fmt.Printf("== [EncodeCompressed - DEBUG] e.p.y: %#x\n", e.p.y)
-
 	e.p.MakeAffine()
 	ret := make([]byte, G1CompressedSize)
 
@@ -95,14 +73,12 @@ func (e *G1) EncodeCompressed() []byte {
 
 	if e.p.IsInfinity() {
 		// Flag the encoding with the infinity flag
-		fmt.Println("== [EncodeCompressed - DEBUG] Setting flag for infinity point")
 		ret[0] |= serializationInfinity
 		return ret
 	}
 
 	if e.IsHigherY() {
 		// Flag the encoding with the bigY flag
-		fmt.Println("== [EncodeCompressed - DEBUG] Setting flag for BigY point")
 		ret[0] |= serializationBigY
 	}
 
@@ -120,9 +96,7 @@ func (e *G1) EncodeCompressed() []byte {
 // Take a point P in Jacobian form (where each coordinate is MontEncoded)
 // and encodes it by going back to affine coordinates and montDecode all coordinates
 func (e *G1) EncodeUncompressed() []byte {
-
 	e.p.MakeAffine()
-	// The +1 accounts for the additional byte used for the flags/masks of the encoding
 	ret := make([]byte, G1UncompressedSize)
 
 	if e.p.IsInfinity() {
@@ -187,7 +161,6 @@ func getYFromMontEncodedX(x *gfP) (*gfP, error) {
 // Take a point P encoded (ie: written in affine form where each coordinate is MontDecoded)
 // and encodes it by going back to Jacobian coordinates and montEncode all coordinates
 func (e *G1) DecodeCompressed(encoding []byte) error {
-	fmt.Printf("== [DecodeCompressed - DEBUG] value of encoding input: %#x\n", encoding)
 	if len(encoding) != G1CompressedSize {
 		return errors.New("wrong encoded point size")
 	}
@@ -222,7 +195,6 @@ func (e *G1) DecodeCompressed(encoding []byte) error {
 				return errors.New("invalid infinity encoding")
 			}
 		}
-		fmt.Println("== [DecodeCompressed - DEBUG] Setting point at infinity!!")
 		e.p.SetInfinity()
 		return nil
 	}
