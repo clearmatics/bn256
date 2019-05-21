@@ -174,8 +174,9 @@ func gfpMul(c, a, b *gfP) {
 	gfpCarry(c, carry)
 }
 
-// Compares 2 gfP
+// Compares 2 elements in GFp
 // Returns 1 if a > b; 0 if a == b; -1 if a < b
+// TODO: Rename gfpCmp to stick to conventional names, Comp is not standard
 func gfpComp(a, b *gfP) int {
 	for i := FpUint64Size - 1; i >= 0; i-- { // Remember that the gfP elements are written as little-endian 64-bit words
 		if a[i] > b[i] { // As soon as we figure out that the MSByte of A > MSByte of B, we return
