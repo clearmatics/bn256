@@ -16,7 +16,7 @@ func assertGFpEqual(t *testing.T, a, b *gfP) {
 }
 
 func TestEncodeCompressed(t *testing.T) {
-	// Create random point (Jacobian form)
+	// Case1: Create random point (Jacobian form)
 	_, GaInit, err := RandomG1(rand.Reader)
 	if err != nil {
 		t.Fatal(err)
@@ -57,6 +57,47 @@ func TestEncodeCompressed(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, GaAffine.p.x.String(), Gb2.p.x.String(), "The x-coord of the decompressed point should equal the x-coord of the intial point")
 	assert.Equal(t, GaAffine.p.y.String(), Gb2.p.y.String(), "The y-coord of the decompressed point should equal the y-coord of the intial point")
+
+	// Case2: Encode the point at infinity
+	GInfinity := new(G1)
+	GInfinity.p = &curvePoint{}
+	GInfinity.p.SetInfinity()
+
+	// Get the point in affine form
+	GInfinityAffine := new(G1)
+	GInfinityAffine.Set(GInfinity)
+	GInfinityAffine.p.MakeAffine()
+
+	// Encode GaCopy1 with the EncodeCompress function
+	GInfinityCopy1 := new(G1)
+	GInfinityCopy1.Set(GInfinity)
+	compressed = GInfinityCopy1.EncodeCompressed()
+
+	// Encode GaCopy2 with the Marshal function
+	GInfinityCopy2 := new(G1)
+	GInfinityCopy2.Set(GInfinity)
+	marshalled = GInfinityCopy2.Marshal() // Careful Marshal modifies the point since it makes it an affine point!
+
+	// Make sure that the x-coordinate is encoded as it is when we call the Marshal function
+	assert.Equal(
+		t,
+		compressed[1:], // Ignore the masking byte
+		marshalled[:32],
+		"The EncodeCompressed and Marshal function yield different results")
+
+	// Unmarshal the point Ga with the unmarshal function
+	Gb1 = new(G1)
+	_, err = Gb1.Unmarshal(marshalled)
+	assert.Nil(t, err)
+	assert.Equal(t, GInfinityAffine.p.x.String(), Gb1.p.x.String(), "The x-coord of the unmarshalled point should equal the x-coord of the intial point")
+	assert.Equal(t, GInfinityAffine.p.y.String(), Gb1.p.y.String(), "The y-coord of the unmarshalled point should equal the y-coord of the intial point")
+
+	// Decode the point Ga with the decodeCompress function
+	Gb2 = new(G1)
+	err = Gb2.DecodeCompressed(compressed)
+	assert.Nil(t, err)
+	assert.Equal(t, GInfinityAffine.p.x.String(), Gb2.p.x.String(), "The x-coord of the decompressed point should equal the x-coord of the intial point")
+	assert.Equal(t, GInfinityAffine.p.y.String(), Gb2.p.y.String(), "The y-coord of the decompressed point should equal the y-coord of the intial point")
 }
 
 func TestIsHigherY(t *testing.T) {
@@ -116,4 +157,89 @@ func TestGetYFromMontEncodedX(t *testing.T) {
 	t.Log(fmt.Sprintf("*yRetrieved = %s", yRetrieved.String()))
 	t.Log(fmt.Sprintf("*yRetrieved == *smallYMontEncoded: %t", (*yRetrieved == *smallYMontEncoded)))
 	t.Log(fmt.Sprintf("*yRetrieved == *bigYMontEncoded: %t", (*yRetrieved == *bigYMontEncoded)))
+}
+
+func TestEncodeUncompressed(t *testing.T) {
+	// Case1: Create random point (Jacobian form)
+	_, GaInit, err := RandomG1(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Affine form of GaInit
+	GaAffine := new(G1)
+	GaAffine.Set(GaInit)
+	GaAffine.p.MakeAffine()
+
+	// Encode GaCopy1 with the EncodeCompress function
+	GaCopy1 := new(G1)
+	GaCopy1.Set(GaInit)
+	encoded := GaCopy1.EncodeUncompressed()
+
+	// Encode GaCopy2 with the Marshal function
+	GaCopy2 := new(G1)
+	GaCopy2.Set(GaInit)
+	marshalled := GaCopy2.Marshal() // Careful Marshal modifies the point since it makes it an affine point!
+
+	// Make sure that the x-coordinate is encoded as it is when we call the Marshal function
+	assert.Equal(
+		t,
+		encoded[1:], // Ignore the masking byte
+		marshalled[:],
+		"The EncodeUncompressed and Marshal function yield different results")
+
+	// Unmarshal the point Ga with the unmarshal function
+	Gb1 := new(G1)
+	_, err = Gb1.Unmarshal(marshalled)
+	assert.Nil(t, err)
+	assert.Equal(t, GaAffine.p.x.String(), Gb1.p.x.String(), "The x-coord of the unmarshalled point should equal the x-coord of the intial point")
+	assert.Equal(t, GaAffine.p.y.String(), Gb1.p.y.String(), "The y-coord of the unmarshalled point should equal the y-coord of the intial point")
+
+	// Decode the point Ga with the decodeCompress function
+	Gb2 := new(G1)
+	err = Gb2.DecodeUncompressed(encoded)
+	assert.Nil(t, err)
+	assert.Equal(t, GaAffine.p.x.String(), Gb2.p.x.String(), "The x-coord of the decompressed point should equal the x-coord of the intial point")
+	assert.Equal(t, GaAffine.p.y.String(), Gb2.p.y.String(), "The y-coord of the decompressed point should equal the y-coord of the intial point")
+
+	// Case2: Encode the point at infinity
+	GInfinity := new(G1)
+	GInfinity.p = &curvePoint{}
+	GInfinity.p.SetInfinity()
+
+	// Get the point in affine form
+	GInfinityAffine := new(G1)
+	GInfinityAffine.Set(GInfinity)
+	GInfinityAffine.p.MakeAffine()
+
+	// Encode GaCopy1 with the EncodeUncompress function
+	GInfinityCopy1 := new(G1)
+	GInfinityCopy1.Set(GInfinity)
+	encoded = GInfinityCopy1.EncodeUncompressed()
+
+	// Encode GaCopy2 with the Marshal function
+	GInfinityCopy2 := new(G1)
+	GInfinityCopy2.Set(GInfinity)
+	marshalled = GInfinityCopy2.Marshal() // Careful Marshal modifies the point since it makes it an affine point!
+
+	// Make sure that the x-coordinate is encoded as it is when we call the Marshal function
+	assert.Equal(
+		t,
+		encoded[1:], // Ignore the masking byte
+		marshalled[:],
+		"The EncodeUncompressed and Marshal function yield different results")
+
+	// Unmarshal the point Ga with the unmarshal function
+	Gb1 = new(G1)
+	_, err = Gb1.Unmarshal(marshalled)
+	assert.Nil(t, err)
+	assert.Equal(t, GInfinityAffine.p.x.String(), Gb1.p.x.String(), "The x-coord of the unmarshalled point should equal the x-coord of the intial point")
+	assert.Equal(t, GInfinityAffine.p.y.String(), Gb1.p.y.String(), "The y-coord of the unmarshalled point should equal the y-coord of the intial point")
+
+	// Decode the point Ga with the decodeCompress function
+	Gb2 = new(G1)
+	err = Gb2.DecodeUncompressed(encoded)
+	assert.Nil(t, err)
+	assert.Equal(t, GInfinityAffine.p.x.String(), Gb2.p.x.String(), "The x-coord of the decompressed point should equal the x-coord of the intial point")
+	assert.Equal(t, GInfinityAffine.p.y.String(), Gb2.p.y.String(), "The y-coord of the decompressed point should equal the y-coord of the intial point")
 }

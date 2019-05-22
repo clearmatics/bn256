@@ -63,9 +63,11 @@ func (e *G1) IsHigherY() bool {
 	return false
 }
 
-// EncodeCompressed converts the compressed point e into bytes}
+// EncodeCompressed converts the compressed point e into bytes
+// This function takes a point in the Jacobian form
+// This function does not modify the point e
+// (the variable `temp` is introduced to avoid to modify e)
 func (e *G1) EncodeCompressed() []byte {
-	e.p.MakeAffine()
 	ret := make([]byte, G1CompressedSize)
 
 	// Flag the encoding with the compressed flag
@@ -77,15 +79,19 @@ func (e *G1) EncodeCompressed() []byte {
 		return ret
 	}
 
+	// This function needs to be called AFTER e.p.IsInfinity
+	// Because e.p.IsInfinity checks that the z-coord == 0
+	// and MakeAffine sets z.coord = 1 after the Jacobian to Affine transform
+	e.p.MakeAffine()
+
 	if e.IsHigherY() {
 		// Flag the encoding with the bigY flag
 		ret[0] |= serializationBigY
 	}
 
-	temp := &gfP{}
-
 	// We start the serializagtion of the coordinates at the index 1
 	// Since the index 0 in the `ret` corresponds to the masking
+	temp := &gfP{}
 	montDecode(temp, &e.p.x)
 	temp.Marshal(ret[1:])
 
@@ -95,8 +101,9 @@ func (e *G1) EncodeCompressed() []byte {
 // EncodeUncompressed converts the compressed point e into bytes
 // Take a point P in Jacobian form (where each coordinate is MontEncoded)
 // and encodes it by going back to affine coordinates and montDecode all coordinates
+// This function does not modify the point e
+// (the variable `temp` is introduced to avoid to modify e)
 func (e *G1) EncodeUncompressed() []byte {
-	e.p.MakeAffine()
 	ret := make([]byte, G1UncompressedSize)
 
 	if e.p.IsInfinity() {
@@ -105,14 +112,18 @@ func (e *G1) EncodeUncompressed() []byte {
 		return ret
 	}
 
-	temp := &gfP{}
+	// This function needs to be called AFTER e.p.IsInfinity
+	// Because e.p.IsInfinity checks that the z-coord == 0
+	// and MakeAffine sets z.coord = 1 after the Jacobian to Affine transform
+	e.p.MakeAffine()
 
-	// We start the serializagtion of the coordinates at the index 1
+	// We start the serialization of the coordinates at the index 1
 	// Since the index 0 in the `ret` corresponds to the masking
-	montDecode(temp, &e.p.x)
-	temp.Marshal(ret[1:])
+	temp := &gfP{}
+	montDecode(temp, &e.p.x) // Store the montgomery decoding in temp
+	temp.Marshal(ret[1:33])  // Write temp in the `ret` slice, this is the x-coordinate
 	montDecode(temp, &e.p.y)
-	temp.Marshal(ret[G1CompressedSize:])
+	temp.Marshal(ret[33:]) // this is the y-coordinate
 
 	return ret
 }
@@ -178,10 +189,9 @@ func (e *G1) DecodeCompressed(encoding []byte) error {
 
 	// Removes the bits of the masking (This does a bitwise AND with `0001 1111`)
 	// And thus removes the first 3 bits corresponding to the masking
-	// Useless for now because in bn256, we added a full byte to enable masking
-	// However, this is needed if we work over BLS12 and its underlying field
 	bin := make([]byte, G1CompressedSize)
 	copy(bin, encoding)
+	bin[0] &= serializationMask
 
 	// Decode the point at infinity in the compressed form
 	if encoding[0]&serializationInfinity != 0 {
@@ -191,6 +201,7 @@ func (e *G1) DecodeCompressed(encoding []byte) error {
 
 		// Similar to `for i:=0; i<len(bin); i++ {}`
 		for i := range bin {
+			// Makes sense to check that all bytes of bin are 0x0 since we removed the masking above
 			if bin[i] != 0 {
 				return errors.New("invalid infinity encoding")
 			}
@@ -255,11 +266,13 @@ func (e *G1) DecodeUncompressed(encoding []byte) error {
 	// And thus removes the first 3 bits corresponding to the masking
 	// Useless for now because in bn256, we added a full byte to enable masking
 	// However, this is needed if we work over BLS12 and its underlying field
-	bin := make([]byte, G1CompressedSize)
+	bin := make([]byte, G1UncompressedSize)
 	copy(bin, encoding)
+	bin[0] &= serializationMask
 
 	// Decode the point at infinity in the compressed form
 	if encoding[0]&serializationInfinity != 0 {
+		// Makes sense to check that all bytes of bin are 0x0 since we removed the masking above}
 		for i := range bin {
 			if bin[i] != 0 {
 				return errors.New("invalid infinity encoding")
