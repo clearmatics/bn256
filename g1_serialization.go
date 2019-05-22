@@ -47,6 +47,11 @@ const (
 // that have the same x-coordinate
 // The point e is assumed to be given in the affine form
 func (e *G1) IsHigherY() bool {
+	// Check nil pointers
+	if e.p == nil {
+		e.p = &curvePoint{}
+	}
+
 	yCoord := &gfP{}
 	yCoord.Set(&e.p.y)
 
@@ -68,6 +73,12 @@ func (e *G1) IsHigherY() bool {
 // This function does not modify the point e
 // (the variable `temp` is introduced to avoid to modify e)
 func (e *G1) EncodeCompressed() []byte {
+	// Check nil pointers
+	if e.p == nil {
+		e.p = &curvePoint{}
+	}
+
+	e.p.MakeAffine()
 	ret := make([]byte, G1CompressedSize)
 
 	// Flag the encoding with the compressed flag
@@ -78,11 +89,6 @@ func (e *G1) EncodeCompressed() []byte {
 		ret[0] |= serializationInfinity
 		return ret
 	}
-
-	// This function needs to be called AFTER e.p.IsInfinity
-	// Because e.p.IsInfinity checks that the z-coord == 0
-	// and MakeAffine sets z.coord = 1 after the Jacobian to Affine transform
-	e.p.MakeAffine()
 
 	if e.IsHigherY() {
 		// Flag the encoding with the bigY flag
@@ -104,6 +110,12 @@ func (e *G1) EncodeCompressed() []byte {
 // This function does not modify the point e
 // (the variable `temp` is introduced to avoid to modify e)
 func (e *G1) EncodeUncompressed() []byte {
+	// Check nil pointers
+	if e.p == nil {
+		e.p = &curvePoint{}
+	}
+
+	e.p.MakeAffine()
 	ret := make([]byte, G1UncompressedSize)
 
 	if e.p.IsInfinity() {
@@ -111,11 +123,6 @@ func (e *G1) EncodeUncompressed() []byte {
 		ret[0] |= serializationInfinity
 		return ret
 	}
-
-	// This function needs to be called AFTER e.p.IsInfinity
-	// Because e.p.IsInfinity checks that the z-coord == 0
-	// and MakeAffine sets z.coord = 1 after the Jacobian to Affine transform
-	e.p.MakeAffine()
 
 	// We start the serialization of the coordinates at the index 1
 	// Since the index 0 in the `ret` corresponds to the masking
@@ -130,6 +137,11 @@ func (e *G1) EncodeUncompressed() []byte {
 
 // Takes a MontEncoded x and finds the corresponding y (one of the two possible y's)
 func getYFromMontEncodedX(x *gfP) (*gfP, error) {
+	// Check nil pointers
+	if x == nil {
+		return nil, errors.New("Cannot retrieve the y-coordinate form a nil pointer")
+	}
+
 	// Operations on montgomery encoded field elements
 	x2 := &gfP{}
 	gfpMul(x2, x, x)
