@@ -171,7 +171,7 @@ func TestEncodeUncompressed(t *testing.T) {
 	GaAffine.Set(GaInit)
 	GaAffine.p.MakeAffine()
 
-	// Encode GaCopy1 with the EncodeCompress function
+	// Encode GaCopy1 with the EncodeUncompress function
 	GaCopy1 := new(G1)
 	GaCopy1.Set(GaInit)
 	encoded := GaCopy1.EncodeUncompressed()
@@ -195,12 +195,12 @@ func TestEncodeUncompressed(t *testing.T) {
 	assert.Equal(t, GaAffine.p.x.String(), Gb1.p.x.String(), "The x-coord of the unmarshalled point should equal the x-coord of the intial point")
 	assert.Equal(t, GaAffine.p.y.String(), Gb1.p.y.String(), "The y-coord of the unmarshalled point should equal the y-coord of the intial point")
 
-	// Decode the point Ga with the decodeCompress function
+	// Decode the point Ga with the decodeUncompress function
 	Gb2 := new(G1)
 	err = Gb2.DecodeUncompressed(encoded)
 	assert.Nil(t, err)
-	assert.Equal(t, GaAffine.p.x.String(), Gb2.p.x.String(), "The x-coord of the decompressed point should equal the x-coord of the intial point")
-	assert.Equal(t, GaAffine.p.y.String(), Gb2.p.y.String(), "The y-coord of the decompressed point should equal the y-coord of the intial point")
+	assert.Equal(t, GaAffine.p.x.String(), Gb2.p.x.String(), "The x-coord of the decoded point should equal the x-coord of the intial point")
+	assert.Equal(t, GaAffine.p.y.String(), Gb2.p.y.String(), "The y-coord of the decoded point should equal the y-coord of the intial point")
 
 	// Case2: Encode the point at infinity
 	GInfinity := new(G1)

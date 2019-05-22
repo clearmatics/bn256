@@ -109,6 +109,7 @@ func (e *G1) EncodeCompressed() []byte {
 // and encodes it by going back to affine coordinates and montDecode all coordinates
 // This function does not modify the point e
 // (the variable `temp` is introduced to avoid to modify e)
+/*
 func (e *G1) EncodeUncompressed() []byte {
 	// Check nil pointers
 	if e.p == nil {
@@ -131,6 +132,28 @@ func (e *G1) EncodeUncompressed() []byte {
 	temp.Marshal(ret[1:33])  // Write temp in the `ret` slice, this is the x-coordinate
 	montDecode(temp, &e.p.y)
 	temp.Marshal(ret[33:]) // this is the y-coordinate
+
+	return ret
+}
+*/
+func (e *G1) EncodeUncompressed() []byte {
+	// Check nil pointers
+	if e.p == nil {
+		e.p = &curvePoint{}
+	}
+
+	// Set the right flags
+	ret := make([]byte, G1UncompressedSize)
+	if e.p.IsInfinity() {
+		// Flag the encoding with the infinity flag
+		ret[0] |= serializationInfinity
+		return ret
+	}
+
+	// Marshal
+	marshal := e.Marshal()
+	// The encoding = flags || marshalledPoint
+	copy(ret[1:], marshal)
 
 	return ret
 }
@@ -249,12 +272,16 @@ func (e *G1) DecodeCompressed(encoding []byte) error {
 		}
 	}
 
+	// No need to check that the point e.p is on the curve
+	// since we retrieved y from x by using the curve equation.
+	// Adding it would be redundant
 	return nil
 }
 
 // DecodeUncompressed decodes a point in the uncompressed form
 // Take a point P encoded (ie: written in affine form where each coordinate is MontDecoded)
 // and encodes it by going back to Jacobian coordinates and montEncode all coordinates
+/*
 func (e *G1) DecodeUncompressed(encoding []byte) error {
 	if len(encoding) != G1UncompressedSize {
 		return errors.New("wrong encoded point size")
@@ -309,5 +336,50 @@ func (e *G1) DecodeUncompressed(encoding []byte) error {
 	montEncode(&e.p.x, &e.p.x)
 	montEncode(&e.p.y, &e.p.y)
 
+	if !e.p.IsOnCurve() {
+		return errors.New("malformed point: Not on the curve")
+	}
+
 	return nil
+}
+*/
+func (e *G1) DecodeUncompressed(encoding []byte) error {
+	if len(encoding) != G1UncompressedSize {
+		return errors.New("wrong encoded point size")
+	}
+	if encoding[0]&serializationCompressed != 0 { // Also test the length of the encoding to make sure it is 65bytes
+		return errors.New("point is compressed")
+	}
+	if encoding[0]&serializationBigY != 0 { // Also test that the bigY flag if not set
+		return errors.New("bigY flag should not be set")
+	}
+
+	// Unmarshal the points and check their caps
+	if e.p == nil {
+		e.p = &curvePoint{}
+	}
+
+	// Removes the bits of the masking (This does a bitwise AND with `0001 1111`)
+	// And thus removes the first 3 bits corresponding to the masking
+	// Useless for now because in bn256, we added a full byte to enable masking
+	// However, this is needed if we work over BLS12 and its underlying field
+	bin := make([]byte, G1UncompressedSize)
+	copy(bin, encoding)
+	bin[0] &= serializationMask
+
+	// Decode the point at infinity in the compressed form
+	if encoding[0]&serializationInfinity != 0 {
+		// Makes sense to check that all bytes of bin are 0x0 since we removed the masking above}
+		for i := range bin {
+			if bin[i] != 0 {
+				return errors.New("invalid infinity encoding")
+			}
+		}
+		e.p.SetInfinity()
+		return nil
+	}
+
+	// We remote the flags and unmarshall the data
+	_, err := e.Unmarshal(encoding[1:])
+	return err
 }
