@@ -125,3 +125,43 @@ func TestExp(t *testing.T) {
 
 	assert.Equal(t, *w, *hDecoded, "The result of the exponentiation is not coherent with the Sagemath test vector")
 }
+
+func TestSqrt(t *testing.T) {
+	// Case 1: Valid QR
+	// qr = 8192512702373747571754527085437364828369119615795326562285198594140975111129*i + 14719814144181528030533020377409648968040866053797156997322427920899698335369
+	// This is a QR in Fp2
+	qrXBig := bigFromBase10("8192512702373747571754527085437364828369119615795326562285198594140975111129")
+	qrYBig := bigFromBase10("14719814144181528030533020377409648968040866053797156997322427920899698335369")
+	qr := &gfP2{*newMontEncodedGFpFromBigInt(qrXBig), *newMontEncodedGFpFromBigInt(qrYBig)}
+	res, err := qr.Sqrt()
+	assert.NoError(t, err, "An error shouldn't be returned as we try to get the sqrt of a QR")
+	// We decode the result of the squaring to compare the result with the Sagemath test vector
+	// To get the sqrt of `r` in Sage, we run: `r.sqrt()`, and we get:
+	// 838738240039331261565244756819667559640832302782323121523807597830118111128*i + 701115843855913009657260259360827182296091347204618857804078039211229345012
+	resDecoded := gfP2Decode(res)
+	expectedXBig := bigFromBase10("838738240039331261565244756819667559640832302782323121523807597830118111128")
+	expectedYBig := bigFromBase10("701115843855913009657260259360827182296091347204618857804078039211229345012")
+	expected := &gfP2{*newGFpFromBigInt(expectedXBig), *newGFpFromBigInt(expectedYBig)}
+
+	assert.Equal(t, *expected, *resDecoded, "The result of the sqrt is not coherent with the Sagemath test vector")
+
+	// Case 2: Valid QR
+	// qr = -1 = 0 * i + 21888242871839275222246405745257275088696311157297823662689037894645226208582
+	// The sqrt of qr is: sqrt = 21888242871839275222246405745257275088696311157297823662689037894645226208582 * i + 0
+	qr = &gfP2{*newGFp(0), *newMontEncodedGFpFromBigInt(bigFromBase10("21888242871839275222246405745257275088696311157297823662689037894645226208582"))}
+	res, err = qr.Sqrt()
+	assert.NoError(t, err, "An error shouldn't be returned as we try to get the sqrt of a QR")
+
+	resDecoded = gfP2Decode(res)
+	expected = &gfP2{*newGFpFromBigInt(bigFromBase10("21888242871839275222246405745257275088696311157297823662689037894645226208582")), *newGFp(0)}
+	assert.Equal(t, *expected, *resDecoded, "The result of the sqrt is not coherent with the Sagemath test vector")
+
+	// Case 3: Get the sqrt of a QNR
+	// qnr = 10142231111593789910248975994434553601587001629804098271704323146176084338608*i + 13558357083504759335548106329923635779485621365040524539176938811542516618464
+	qnrXBig := bigFromBase10("10142231111593789910248975994434553601587001629804098271704323146176084338608")
+	qnrYBig := bigFromBase10("13558357083504759335548106329923635779485621365040524539176938811542516618464")
+	qnr := &gfP2{*newMontEncodedGFpFromBigInt(qnrXBig), *newMontEncodedGFpFromBigInt(qnrYBig)}
+	res, err = qnr.Sqrt()
+	assert.Error(t, err, "An error should have been returned as we try to get the sqrt of a QNR")
+	assert.Nil(t, res, "The result of sqrt should be nil as we try to get the sqrt of a QNR")
+}

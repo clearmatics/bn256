@@ -233,7 +233,7 @@ func (e *gfP2) Exp(exponent *big.Int) *gfP2 {
 //
 // - "Faster square roots in annoying finite fields"
 // - URL: http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.21.9172
-func (e *gfP2) Sqrt() *gfP2 {
+func (e *gfP2) Sqrt() (*gfP2, error) {
 	// In GF(p^m), Euler's Criterion is defined like EC(x) = x^((p^m -1) / 2), if EC(x) == 1, x is a QR; if EC(x) == -1, x is a QNR
 	// `euler` here, is the exponent used in Euler's criterion, thus, euler = (p^m -1) / 2 for GF(p^m)
 	// here, we work over GF(p^2), so euler = (p^2 -1) / 2, where p = 21888242871839275222246405745257275088696311157297823662689037894645226208583
@@ -276,9 +276,10 @@ func (e *gfP2) Sqrt() *gfP2 {
 	bCheck := new(gfP2).Set(b)
 	for i := 0; i < 3; i++ { // 3 == s-1 here, to replace by a variable to make it cleaner (see comment above)
         bCheck = bCheck.Square(bCheck);
-    }
+	}
+
     if !bCheck.IsOne() {
-        panic(errors.New("Cannot extract a root. The element is not a QR in Fp2"))
+    	return nil, errors.New("Cannot extract a root. The element is not a QR in Fp2")
 	}
 
 	// Extract the root of the quadratic residue using the Tonelli-Shanks algorithm
@@ -304,5 +305,5 @@ func (e *gfP2) Sqrt() *gfP2 {
         v = m
     }
 
-    return x
+    return x, nil
 }
