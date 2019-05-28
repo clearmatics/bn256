@@ -117,9 +117,6 @@ func (e *gfP) Set(f *gfP) {
 }
 
 func (e *gfP) Invert(f *gfP) {
-	// Bits is set with the value of p2 in the constants.go file
-	// TODO: Remove this assigment and replace it with the p2 constant
-	// var p2 = [4]uint64{0x3c208c16d87cfd47, 0x97816a916871ca8d, 0xb85045b68181585d, 0x30644e72e131a029}
 	bits := [4]uint64{0x3c208c16d87cfd45, 0x97816a916871ca8d, 0xb85045b68181585d, 0x30644e72e131a029}
 
 	sum, power := &gfP{}, &gfP{}
