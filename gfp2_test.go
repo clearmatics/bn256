@@ -1,7 +1,6 @@
 package bn256
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -113,8 +112,6 @@ func TestExp(t *testing.T) {
 
 	// Result returned by the Exp function
 	bigExp := bigFromBase10("379310603613032310218302470789826871295")
-	fmt.Printf("Exponent byte value: %#x\n", bigExp.Bytes())
-	fmt.Printf("Exponent bits value: %#x\n", bigExp.Bits())
 	h = &gfP2{}
 	h = h.Set(baseElement)
 	h = h.Exp(bigExp)

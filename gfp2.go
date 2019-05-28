@@ -1,8 +1,8 @@
 package bn256
 
 import (
-	"math"
 	"errors"
+	"math"
 	"math/big"
 )
 
@@ -169,8 +169,8 @@ func (e *gfP2) Invert(a *gfP2) *gfP2 {
 }
 
 // Exp is a function to exponentiate field elements
-// This function navigates the big int binary representation (assumed to be in big endian)
-// from left to right.
+// This function navigates the big.Int binary representation
+// from left to right (assumed to be in big endian)
 // When going from left to right, each bit is checked, and when the first `1` bit is found
 // the `foundOne` flag is set, and the "exponentiation begins"
 //
@@ -203,7 +203,6 @@ func (e *gfP2) Exp(exponent *big.Int) *gfP2 {
 	base = base.Set(e)
 
 	foundOne := false
-	// Absolute value of `exponent` as a big-endian Byte slice
 	exponentBytes := exponent.Bytes() // big endian bytes slice
 
 	for i := 0; i < len(exponentBytes); i++ { // for each byte (remember the slice is big endian)
@@ -212,7 +211,7 @@ func (e *gfP2) Exp(exponent *big.Int) *gfP2 {
 				res = res.Mul(res, res)
 			}
 
-			if uint(exponentBytes[i])&uint(math.Pow(2, float64(7-j))) != uint(0) { // a byte contains the powers of 2 from 2^7 to 2^0 hence why we do 2^(7-j)
+			if uint(exponentBytes[i])&uint(math.Pow(2, float64(7-j))) != uint(0) { // a byte contains the powers of 2 from 2^7 to 2^0 hence why we do 2^(7-j) (big-endian assumed)
 				foundOne = true
 				res = res.Mul(res, base)
 			}
@@ -224,7 +223,7 @@ func (e *gfP2) Exp(exponent *big.Int) *gfP2 {
 }
 
 // Sqrt returns the square root of e in GFp2
-// See: 
+// See:
 // - "A High-Speed Square Root Algorithm for Extension Fields - Especially for Fast Extension Fields"
 // - URL: https://core.ac.uk/download/pdf/12530172.pdf
 //
@@ -242,7 +241,7 @@ func (e *gfP2) Sqrt() (*gfP2, error) {
 	// modulus^2 = 2^s * t + 1 => p^2 = 2^s * t + 1, where t is odd
 	// In our case, p^2 = 2^s * t + 1, where s = 4, t = 29943448501038927652624252826042421299953269783193801402277987640879380855398639840490065738714866998199264519675818766364765977133724184290399563929243
 	////t := bigFromBase10("29943448501038927652624252826042421299953269783193801402277987640879380855398639840490065738714866998199264519675818766364765977133724184290399563929243")
-	//s := bigFromBase10("4")
+	////s := bigFromBase10("4")
 	s := 4
 
 	// tMinus1Over2 = (t-1) / 2
@@ -267,43 +266,43 @@ func (e *gfP2) Sqrt() (*gfP2, error) {
 	w = w.Exp(tMinus1Over2)
 	x := new(gfP2).Mul(e, w)
 	b := new(gfP2).Mul(x, w) // contains e^t
-	
+
 	// Check if the element is a QR
 	// Since p^2 = 2^s * t + 1 => t = (p^2 - 1)/2
 	// Thus, since we have b = e^t, and since we want to test if e is a QR
 	// we need to square b (s-1) times. That way we'd have
 	// (e^t)^{2^(s-1)} which equals e^{(p^2 - 1)/2} => Euler criterion
 	bCheck := new(gfP2).Set(b)
-	for i := 0; i < 3; i++ { // 3 == s-1 here, to replace by a variable to make it cleaner (see comment above)
-        bCheck = bCheck.Square(bCheck);
+	for i := 0; i < s-1; i++ { // s-1 == 3 here (see comment above)
+		bCheck = bCheck.Square(bCheck)
 	}
 
-    if !bCheck.IsOne() {
-    	return nil, errors.New("Cannot extract a root. The element is not a QR in Fp2")
+	if !bCheck.IsOne() {
+		return nil, errors.New("Cannot extract a root. The element is not a QR in Fp2")
 	}
 
 	// Extract the root of the quadratic residue using the Tonelli-Shanks algorithm
 	for !b.IsOne() {
-        m := 0
-        b2m := new(gfP2).Set(b)
-        for (!b2m.IsOne()) {
-            /* invariant: b2m = b^(2^m) after entering this loop */
-            b2m = b2m.Square(b2m)
-            m++
-        }
+		m := 0
+		b2m := new(gfP2).Set(b)
+		for !b2m.IsOne() {
+			/* invariant: b2m = b^(2^m) after entering this loop */
+			b2m = b2m.Square(b2m)
+			m++
+		}
 
-        j := v-m-1
-        w = z
-        for j > 0 {
-            w = w.Square(w)
-            j--
-        } // w = z^2^(v-m-1)
+		j := v - m - 1
+		w = z
+		for j > 0 {
+			w = w.Square(w)
+			j--
+		} // w = z^2^(v-m-1)
 
-        z = new(gfP2).Square(w)
-        b = b.Mul(b, z)
-        x = x.Mul(x, w)
-        v = m
-    }
+		z = new(gfP2).Square(w)
+		b = b.Mul(b, z)
+		x = x.Mul(x, w)
+		v = m
+	}
 
-    return x, nil
+	return x, nil
 }
