@@ -1,9 +1,8 @@
 package bn256
 
 import (
-	"math/big"
-	"fmt"
 	"math"
+	"math/big"
 )
 
 // For details of the algorithms used, see "Multiplication and Squaring on
@@ -84,12 +83,12 @@ func (e *gfP2) Sub(a, b *gfP2) *gfP2 {
 func (e *gfP2) Mul(a, b *gfP2) *gfP2 {
 	tx, t := &gfP{}, &gfP{}
 	gfpMul(tx, &a.x, &b.y) // tx = a.x * b.y
-	gfpMul(t, &b.x, &a.y) // t = b.x * a.y
-	gfpAdd(tx, tx, t) // tx = a.x * b.y + b.x * a.y
+	gfpMul(t, &b.x, &a.y)  // t = b.x * a.y
+	gfpAdd(tx, tx, t)      // tx = a.x * b.y + b.x * a.y
 
 	ty := &gfP{}
 	gfpMul(ty, &a.y, &b.y) // ty = a.y * b.y
-	gfpMul(t, &a.x, &b.x) // t = a.x * b.x
+	gfpMul(t, &a.x, &b.x)  // t = a.x * b.x
 	// We do a subtraction in the field since β = -1 in our case
 	// In fact, Fp2 is built using the irreducible polynomial X^2 - β, where β = -1 = p-1
 	gfpSub(ty, ty, t) // ty = a.y * b.y - a.x * b.x
@@ -204,17 +203,16 @@ func (e *gfP2) Exp(exponent *big.Int) *gfP2 {
 	for i := 0; i < len(exponentBytes); i++ { // for each byte (remember the slice is big endian)
 		for j := 0; j <= 7; j++ { // A byte contains the powers of 2 to 2^7 to 2^0 from left to right
 			if foundOne {
-				fmt.Println("[DEBUG] if foundOne { condition")
 				res = res.Mul(res, res)
 			}
 
-			if uint(exponentBytes[i]) & uint(math.Pow(2, float64(7-j))) != uint(0) { // a byte contains the powers of 2 from 2^7 to 2^0 hence why we do 2^(7-j)
-				fmt.Println("[DEBUG] Bit one")
+			if uint(exponentBytes[i])&uint(math.Pow(2, float64(7-j))) != uint(0) { // a byte contains the powers of 2 from 2^7 to 2^0 hence why we do 2^(7-j)
 				foundOne = true
 				res = res.Mul(res, base)
 			}
 		}
 	}
 
-	return res
+	e.Set(res)
+	return e
 }
