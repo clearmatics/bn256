@@ -89,7 +89,11 @@ func TestGFpToBigInt(t *testing.T) {
 	twoBig := bigFromBase10("2")
 	twoGFp := gfP(twoHex) // Not MontEncoded!
 	w := twoBig
-	h := twoGFp.gFpToBigInt()
+	h, err := twoGFp.gFpToBigInt()
+
+	if err != nil {
+		t.Errorf("Couldn't convert GFp to big.Int: %s", err)
+	}
 
 	if r := h.Cmp(w); r != 0 {
 		t.Errorf("conversion mismatch: have %s, want %s", h.String(), w.String())
@@ -100,7 +104,11 @@ func TestGFpToBigInt(t *testing.T) {
 	pMinus1Big := bigFromBase10("21888242871839275222246405745257275088696311157297823662689037894645226208582")
 	pMinus1GFp := gfP(pMinus1Hex) // Not MontEncoded!
 	w = pMinus1Big
-	h = pMinus1GFp.gFpToBigInt()
+	h, err = pMinus1GFp.gFpToBigInt()
+
+	if err != nil {
+		t.Errorf("Couldn't convert GFp to big.Int: %s", err)
+	}
 
 	if r := h.Cmp(w); r != 0 {
 		t.Errorf("conversion mismatch: have %s, want %s", h.String(), w.String())

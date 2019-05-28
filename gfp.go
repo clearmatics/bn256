@@ -97,16 +97,16 @@ func newMontEncodedGFpFromBigInt(in *big.Int) *gfP {
 }
 
 // Convert a gfP into a big.Int
-func (e *gfP) gFpToBigInt() (out *big.Int) {
+func (e *gfP) gFpToBigInt() (*big.Int, error) {
 	str := e.String()
 
-	out = new(big.Int)
+	out := new(big.Int)
 	_, ok := out.SetString(str, 16)
 	if !ok {
-		errors.New("couldn't create big.Int from gfP element")
+		return nil, errors.New("couldn't create big.Int from gfP element")
 	}
 
-	return out
+	return out, nil
 }
 
 func (e *gfP) Set(f *gfP) {

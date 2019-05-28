@@ -153,10 +153,6 @@ func TestGetYFromMontEncodedX(t *testing.T) {
 
 	testCondition := (*yRetrieved == *smallYMontEncoded) || (*yRetrieved == *bigYMontEncoded)
 	assert.True(t, testCondition, "The retrieved Y should either equal 2 or Inv(2)")
-
-	t.Log(fmt.Sprintf("*yRetrieved = %s", yRetrieved.String()))
-	t.Log(fmt.Sprintf("*yRetrieved == *smallYMontEncoded: %t", (*yRetrieved == *smallYMontEncoded)))
-	t.Log(fmt.Sprintf("*yRetrieved == *bigYMontEncoded: %t", (*yRetrieved == *bigYMontEncoded)))
 }
 
 func TestEncodeUncompressed(t *testing.T) {

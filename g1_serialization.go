@@ -188,7 +188,10 @@ func getYFromMontEncodedX(x *gfP) (*gfP, error) {
 	// - Px := &gfP{1} => 0000000000000000000000000000000000000000000000000000000000000001
 	// - PxNew := newGFp(1) => 0e0a77c19a07df2f666ea36f7879462c0a78eb28f5c70b3dd35d438dc58f0d9d
 	montDecode(rhs, rhs)
-	rhsBig := rhs.gFpToBigInt()
+	rhsBig, err := rhs.gFpToBigInt()
+	if err != nil {
+		return nil, err
+	}
 
 	// Note, if we use the ModSqrt method, we don't need the exponent, so we can comment these lines
 	yCoord := big.NewInt(0)
