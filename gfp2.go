@@ -195,6 +195,25 @@ func (e *gfP2) Invert(a *gfP2) *gfP2 {
 // initializes the calling gfP2 to the one element of the Gfp2 which is montEncoded
 // then, we need to make sure that the `e` element of gfP2 used to call the Exp function
 // is also montEncoded (ie; both x and y are montEncoded)
+/*
+TODO: Refactor this function like this:
+func (e *gfP2) Exp(a *gfP2, exponent *big.Int) *gfP2 {
+	sum := (&gfP2{}).SetOne()
+	t := &gfP2{}
+
+	for i := exponent.BitLen() - 1; i >= 0; i-- {
+		t.Square(sum)
+		if exponent.Bit(i) != 0 {
+			sum.Mul(t, a)
+		} else {
+			sum.Set(t)
+		}
+	}
+
+	e.Set(sum)
+	return e
+}
+*/
 func (e *gfP2) Exp(exponent *big.Int) *gfP2 {
 	res := &gfP2{}
 	res = res.SetOne()

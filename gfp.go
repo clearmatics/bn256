@@ -163,6 +163,9 @@ func (e *gfP) Unmarshal(in []byte) error {
 	return errors.New("bn256: coordinate equals modulus")
 }
 
+// Note: This function is only used to distinguish between points with the same x-coordinates
+// when doing point compression.
+// An ordered field must be infinite and we are working over a finite field here
 func gfpCmp(a, b *gfP) int {
 	for i := FpUint64Size - 1; i >= 0; i-- { // Remember that the gfP elements are written as little-endian 64-bit words
 		if a[i] > b[i] { // As soon as we figure out that the MSByte of A > MSByte of B, we return
