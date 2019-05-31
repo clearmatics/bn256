@@ -15,7 +15,6 @@ package bn256
 
 import (
 	"errors"
-	"fmt"
 )
 
 // This file implement some util functions for the MPC
@@ -167,28 +166,19 @@ func (e *G2) EncodeCompressed() []byte {
 
 // Takes a MontEncoded x and finds the corresponding y (one of the two possible y's)
 func getYFromMontEncodedXG2(x *gfP2) (*gfP2, error) {
-	fmt.Printf("Value of x initial: %s\n", x.String())
-
 	// Check nil pointers
 	if x == nil {
 		return nil, errors.New("Cannot retrieve the y-coordinate from a nil pointer")
 	}
 
-	fmt.Printf("Value of x after nil check: %s\n", x.String())
-
 	x2 := new(gfP2).Mul(x, x)
 	x3 := new(gfP2).Mul(x2, x)
 	rhs := new(gfP2).Add(x3, twistB) // twistB is MontEncoded, since it is create with newGFp
-
-	fmt.Printf("Value of x after rhs computation: %s\n", x.String())
 
 	yCoord, err := rhs.Sqrt()
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Printf("Value of x after sqrt computation: %s\n", x.String())
-	fmt.Printf("Value of y after sqrt computation: %s\n", yCoord.String())
 
 	return yCoord, nil
 }
@@ -204,8 +194,6 @@ func (e *G2) DecodeCompressed(encoding []byte) error {
 		return errors.New("point isn't compressed")
 	}
 
-	fmt.Println("Debug 1")
-
 	// Unmarshal the points and check their caps
 	if e.p == nil {
 		e.p = &twistPoint{}
@@ -216,8 +204,6 @@ func (e *G2) DecodeCompressed(encoding []byte) error {
 		e.p.t.SetOne()
 	}
 
-	fmt.Println("Debug 2")
-
 	// Removes the bits of the masking (This does a bitwise AND with `0001 1111`)
 	// And thus removes the first 3 bits corresponding to the masking
 	bin := make([]byte, G2CompressedSize)
@@ -226,8 +212,6 @@ func (e *G2) DecodeCompressed(encoding []byte) error {
 
 	// Decode the point at infinity in the compressed form
 	if encoding[0]&serializationInfinity != 0 {
-		fmt.Println("Debug 3")
-
 		if encoding[0]&serializationBigY != 0 {
 			return errors.New("high Y bit improperly set")
 		}
@@ -243,8 +227,6 @@ func (e *G2) DecodeCompressed(encoding []byte) error {
 		return nil
 	}
 
-	fmt.Println("Debug 4")
-
 	// Decompress the point P (P =/= ∞)
 	var err error
 	if err = e.p.x.x.Unmarshal(bin[1:]); err != nil {
@@ -254,29 +236,16 @@ func (e *G2) DecodeCompressed(encoding []byte) error {
 		return err
 	}
 
-	fmt.Printf("[Debug] Value of e.p.x => %s\n", e.p.x.String())
-
 	// MontEncode our field elements for fast finite field arithmetic
 	// Needs to be done since the z and t coordinates are also encoded (ie: created with newGFp)
 	montEncode(&e.p.x.x, &e.p.x.x)
 	montEncode(&e.p.x.y, &e.p.x.y)
-
-	fmt.Printf("[Debug] Value of e.p.x after encoding => %s\n", e.p.x.String())
 
 	y, err := getYFromMontEncodedXG2(&e.p.x)
 	if err != nil {
 		return err
 	}
 	e.p.y = *y
-
-	// Debug
-	eCopy := new(G2).Set(e)
-	fmt.Printf("[Debug] Value of e.p.x after recovery of x => %s\n", eCopy.p.x.String())
-	fmt.Printf("[Debug] Value of e.p.y after recovery of y => %s\n", eCopy.p.y.String())
-	fmt.Printf("[Debug] Value of e.p after recovery of y => %s\n", eCopy.p.String())
-
-	fmt.Printf("[Debug] === Value of e.p.x after recovery of x => %s\n", e.p.x.String())
-	fmt.Printf("[Debug] === Value of e.p.y after recovery of y => %s\n", e.p.y.String())
 
 	// The flag serializationBigY is set (so the point pt with the higher Y is encoded)
 	// but the point e retrieved from the `getYFromX` is NOT the higher, then we inverse
@@ -289,9 +258,6 @@ func (e *G2) DecodeCompressed(encoding []byte) error {
 			e.Neg(e)
 		}
 	}
-
-	fmt.Printf("[Debug] === Value of e.p.x before return of x => %s\n", e.p.x.String())
-	fmt.Printf("[Debug] === Value of e.p.y before return of y => %s\n", e.p.y.String())
 
 	// No need to check that the point e.p is on the curve
 	// since we retrieved y from x by using the curve equation.
